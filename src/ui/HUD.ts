@@ -3,6 +3,7 @@
 
 import type { Puppet } from '../entities/Puppet';
 import type { ScoringEngine } from '../game/ScoringEngine';
+import type { GameMode } from '../game/Modes/GameMode';
 import { Localization } from '../core/Localization';
 
 export class HUD {
@@ -57,6 +58,7 @@ export class HUD {
     timeRemaining: number,
     modeName: string,
     localPlayerIndex = 0,
+    currentMode?: GameMode,
   ): void {
     // 1. Update Timer
     if (this._timerEl) {
@@ -73,7 +75,20 @@ export class HUD {
 
     const modeBadge = document.querySelector('#neo-hud-mode-badge');
     if (modeBadge) {
-      modeBadge.textContent = modeName.toUpperCase();
+      if (currentMode && currentMode.id === 'team_tag') {
+        const teamScores = currentMode.getTeamScores?.(scoring);
+        if (teamScores) {
+          modeBadge.innerHTML = `<span style="color:#ff0055; font-weight:900">RED: ${teamScores.red}</span> &nbsp;|&nbsp; <span style="color:#00ffff; font-weight:900">BLUE: ${teamScores.blue}</span>`;
+        } else {
+          modeBadge.textContent = modeName.toUpperCase();
+        }
+      } else if (currentMode && currentMode.id === 'last_survivor') {
+        const cullSec = currentMode.getEliminationCountdown?.();
+        const cullText = cullSec !== undefined && cullSec !== null ? ` [CULL: ${Math.ceil(cullSec)}s]` : '';
+        modeBadge.textContent = `${modeName.toUpperCase()}${cullText}`;
+      } else {
+        modeBadge.textContent = modeName.toUpperCase();
+      }
     }
 
     // 2. Update Scores
@@ -95,7 +110,22 @@ export class HUD {
       }
 
       let statusIcon = '';
-      if (p.isIt()) {
+      if (p.isEliminated()) {
+        statusIcon = '<span class="neo-status-pill bomb" style="background:#444; color:#fff">ELIMINATED</span>';
+      } else if (currentMode && currentMode.id === 'team_tag') {
+        const team = currentMode.getTeam?.(idx) ?? (idx % 2 === 0 ? 'red' : 'blue');
+        if (team === 'red') {
+          statusIcon = '<span class="neo-status-pill it" style="background:#ff0055">RED</span>';
+        } else {
+          statusIcon = '<span class="neo-status-pill crown" style="background:#00ffff; color:#000">BLUE</span>';
+        }
+      } else if (currentMode && currentMode.id === 'infection_mode') {
+        if (p.isIt()) {
+          statusIcon = '<span class="neo-status-pill it" style="background:#ff0055">INFECTED</span>';
+        } else {
+          statusIcon = '<span class="neo-status-pill crown" style="background:#00ff88; color:#000">SURVIVOR</span>';
+        }
+      } else if (p.isIt()) {
         statusIcon = '<span class="neo-status-pill it">HUNTER</span>';
       } else if (p.hasCrown()) {
         statusIcon = '<span class="neo-status-pill crown">👑 CROWN</span>';

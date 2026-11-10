@@ -10,6 +10,9 @@ import { OrbitalStationMap } from './arenas/OrbitalStationMap';
 import { MagmaReactorMap } from './arenas/MagmaReactorMap';
 import { GlacierLabMap } from './arenas/GlacierLabMap';
 import { SkylineRushMap } from './arenas/SkylineRushMap';
+import { UnderwaterRuinsMap } from './arenas/UnderwaterRuinsMap';
+import { DesertSandstormMap } from './arenas/DesertSandstormMap';
+import { HauntedCarnivalMap } from './arenas/HauntedCarnivalMap';
 import type { Puppet } from '../entities/Puppet';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { ParticleSystem } from '../graphics/Particles';
@@ -42,6 +45,9 @@ export class MapManager {
     MagmaReactorMap,
     GlacierLabMap,
     SkylineRushMap,
+    UnderwaterRuinsMap,
+    DesertSandstormMap,
+    HauntedCarnivalMap,
   ];
 
   private _currentIndex = 0;
@@ -254,12 +260,15 @@ export class MapManager {
     if (e.code === 'KeyM') {
       this.switchToNextMap();
     }
-    // 1-5 = Direct switch
+    // 1-8 = Direct switch
     if (e.code === 'Digit1') this._switchToIndex(0);
     if (e.code === 'Digit2') this._switchToIndex(1);
     if (e.code === 'Digit3') this._switchToIndex(2);
     if (e.code === 'Digit4') this._switchToIndex(3);
     if (e.code === 'Digit5') this._switchToIndex(4);
+    if (e.code === 'Digit6') this._switchToIndex(5);
+    if (e.code === 'Digit7') this._switchToIndex(6);
+    if (e.code === 'Digit8') this._switchToIndex(7);
     // T = Run 10-cycle leak test
     if (e.code === 'KeyT') {
       this.runLeakTest(10);

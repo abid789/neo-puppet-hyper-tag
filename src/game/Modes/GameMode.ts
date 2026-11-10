@@ -18,4 +18,12 @@ export interface GameMode {
   getBombTimer(): number | null;
   reset(): void;
   destroy(): void;
+
+  // Mode specific extension hooks
+  isRoundOver?(): boolean;
+  getTeam?(playerIndex: number): 'red' | 'blue' | null;
+  getTeamScores?(scoring: ScoringEngine): { red: number; blue: number } | null;
+  isInfected?(playerIndex: number): boolean;
+  isEliminated?(playerIndex: number): boolean;
+  getEliminationCountdown?(): number | null;
 }

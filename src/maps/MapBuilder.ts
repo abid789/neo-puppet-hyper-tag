@@ -678,6 +678,32 @@ export class MapBuilder {
           }
         }
       }
+
+      // Slow zones (sunken archways, quicksand patches)
+      if (this._mapDef.slowZones) {
+        for (let i = 0; i < this._mapDef.slowZones.length; i++) {
+          const sz = this._mapDef.slowZones[i];
+          if (
+            Math.abs(pos.x - sz.x) <= sz.w / 2 &&
+            Math.abs(pos.y - sz.y) <= sz.h / 2
+          ) {
+            puppet.setSlowdown(sz.factor);
+          }
+        }
+      }
+
+      // Control flip zones (fun-house mirror zone)
+      if (this._mapDef.controlFlipZones) {
+        for (let i = 0; i < this._mapDef.controlFlipZones.length; i++) {
+          const cf = this._mapDef.controlFlipZones[i];
+          if (
+            Math.abs(pos.x - cf.x) <= cf.w / 2 &&
+            Math.abs(pos.y - cf.y) <= cf.h / 2
+          ) {
+            puppet.invertControls(cf.durationSec);
+          }
+        }
+      }
     }
 
     // 4. Update weather particles
@@ -755,6 +781,39 @@ export class MapBuilder {
           this._parallaxGfx
             .rect(b + offsetX, 400 - h + offsetY, 100, h)
             .fill({ color: pl.color, alpha: pl.alpha });
+        }
+      } else if (pl.kind === 'underwater_ruins') {
+        // Sunken archway columns and deep aquatic ruins
+        for (let x = -850; x <= 850; x += 190) {
+          this._parallaxGfx
+            .roundRect(x + offsetX, -450 + offsetY, 50, 900, 12)
+            .fill({ color: pl.color, alpha: pl.alpha });
+          this._parallaxGfx
+            .rect(x - 50 + offsetX, -250 + offsetY, 150, 30)
+            .fill({ color: pl.color, alpha: pl.alpha * 0.85 });
+        }
+      } else if (pl.kind === 'desert_dunes') {
+        // Rolling desert sand dunes
+        this._parallaxGfx.poly([
+          { x: -900, y: 150 + offsetY },
+          { x: -500 + offsetX, y: -50 + offsetY },
+          { x: -100 + offsetX, y: 100 + offsetY },
+          { x: 350 + offsetX, y: -80 + offsetY },
+          { x: 900, y: 120 + offsetY },
+          { x: 900, y: 600 },
+          { x: -900, y: 600 },
+        ]).fill({ color: pl.color, alpha: pl.alpha });
+      } else if (pl.kind === 'haunted_carnival') {
+        // Neon big-top circus silhouettes and roller coaster arches
+        for (let x = -800; x <= 800; x += 260) {
+          this._parallaxGfx.poly([
+            { x: x - 90 + offsetX, y: 250 + offsetY },
+            { x: x + offsetX, y: -150 + offsetY },
+            { x: x + 90 + offsetX, y: 250 + offsetY },
+          ]).fill({ color: pl.color, alpha: pl.alpha });
+          this._parallaxGfx
+            .circle(x + 130 + offsetX, -120 + offsetY, 70)
+            .stroke({ color: pl.color, width: 2.0, alpha: pl.alpha * 0.7 });
         }
       }
     }
@@ -916,6 +975,45 @@ export class MapBuilder {
           .stroke({ color: this._mapDef.palette.primary, width: 2.5 });
       }
     }
+
+    // 9. Slow zones
+    if (this._mapDef.slowZones) {
+      for (let i = 0; i < this._mapDef.slowZones.length; i++) {
+        const sz = this._mapDef.slowZones[i];
+        const sx = sz.x * PPM;
+        const sy = sz.y * PPM;
+        const sw = sz.w * PPM;
+        const sh = sz.h * PPM;
+        const col = sz.color ?? this._mapDef.palette.accent;
+        this._mechanicsGfx
+          .roundRect(sx - sw / 2, sy - sh / 2, sw, sh, 6)
+          .fill({ color: col, alpha: 0.18 })
+          .stroke({ color: col, width: 1.5, alpha: 0.45 });
+      }
+    }
+
+    // 10. Control flip zones
+    if (this._mapDef.controlFlipZones) {
+      for (let i = 0; i < this._mapDef.controlFlipZones.length; i++) {
+        const cf = this._mapDef.controlFlipZones[i];
+        const cx = cf.x * PPM;
+        const cy = cf.y * PPM;
+        const cw = cf.w * PPM;
+        const ch = cf.h * PPM;
+        const col = cf.color ?? 0xff00aa;
+        const pulse = Math.sin(this._timeElapsed * 4) * 0.1;
+        this._mechanicsGfx
+          .roundRect(cx - cw / 2, cy - ch / 2, cw, ch, 8)
+          .fill({ color: col, alpha: 0.22 + pulse })
+          .stroke({ color: 0xffffff, width: 2.0, alpha: 0.8 });
+        for (let y = cy - ch / 2 + 10; y < cy + ch / 2; y += 16) {
+          this._mechanicsGfx
+            .moveTo(cx - cw / 2 + 6, y)
+            .lineTo(cx + cw / 2 - 6, y)
+            .stroke({ color: col, width: 1.0, alpha: 0.35 });
+        }
+      }
+    }
   }
 
   private _renderHazards(): void {
@@ -955,6 +1053,22 @@ export class MapBuilder {
           .moveTo(wp.x, wp.y)
           .lineTo(wp.x - 3, wp.y + 12)
           .stroke({ color: w.color, width: 1.2, alpha: w.alpha });
+      } else if (w.kind === 'bubbles') {
+        this._weatherGfx
+          .circle(wp.x, wp.y, w.size + Math.sin(wp.x * 0.05) * 1.5)
+          .stroke({ color: 0xffffff, width: 1.0, alpha: w.alpha })
+          .fill({ color: w.color, alpha: w.alpha * 0.4 });
+      } else if (w.kind === 'sandstorm') {
+        this._weatherGfx
+          .moveTo(wp.x, wp.y)
+          .lineTo(wp.x + 14, wp.y + (Math.sin(wp.y * 0.1) * 3))
+          .stroke({ color: w.color, width: 1.5, alpha: w.alpha });
+      } else if (w.kind === 'carnival_confetti') {
+        const confettiColors = [0xff00aa, 0xffee00, 0x00ffff, 0x00ff88, 0xff6600];
+        const col = confettiColors[i % confettiColors.length];
+        this._weatherGfx
+          .rect(wp.x - 2, wp.y - 2, 4, 5)
+          .fill({ color: col, alpha: w.alpha });
       } else {
         this._weatherGfx
           .circle(wp.x, wp.y, w.size)

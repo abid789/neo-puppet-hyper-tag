@@ -220,6 +220,7 @@ async function main(): Promise<void> {
     onStartGame: (cfg) => {
       engine.setTimeScale(1.0, 0);
       mapManager.loadInitialMap(cfg.mapIndex);
+      matchController.setGameMode(cfg.modeIndex);
       matchController.setRoundDuration(cfg.durationSec);
       activeBotCount = cfg.botCount;
       for (let i = 0; i < botPool.length; i++) {
@@ -416,6 +417,7 @@ async function main(): Promise<void> {
             matchController.roundTimeRemaining,
             matchController.currentMode.name,
             net.localPlayerIndex,
+            matchController.currentMode,
           );
         }
 

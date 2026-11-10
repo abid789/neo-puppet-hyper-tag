@@ -19,6 +19,9 @@ export const MAP_PREVIEWS = [
   { id: 'magma_reactor', name: 'MAGMA CORE REACTOR', color: '#ff6600', desc: 'Crumbling basalt platforms & lava surges' },
   { id: 'glacier_lab', name: 'GLACIER MIRROR LAB', color: '#88ffff', desc: 'Slippery ice shelves & crystal pendulums' },
   { id: 'skyline_rush', name: 'SKYLINE ROOFTOP RUSH', color: '#ff0066', desc: 'Rainy high-altitude gaps & speed ziplines' },
+  { id: 'underwater_ruins', name: 'UNDERWATER RUINS', color: '#00ffc2', desc: 'Buoyant platforms, bubble vents & water drag' },
+  { id: 'desert_sandstorm', name: 'DESERT SANDSTORM', color: '#ffaa00', desc: 'Sandstorm gusts, floating pillars & quicksand' },
+  { id: 'haunted_carnival', name: 'HAUNTED CARNIVAL', color: '#ff00aa', desc: 'Ferris wheel, trampolines & fun-house mirror' },
 ];
 
 export class MatchCustomizer {
@@ -87,6 +90,18 @@ export class MatchCustomizer {
               <button class="neo-mode-btn ${this._cfg.modeIndex === 2 ? 'selected' : ''}" data-mode="2">
                 <strong>${Localization.t('modeCrown')}</strong>
                 <span>${Localization.t('modeCrownDesc')}</span>
+              </button>
+              <button class="neo-mode-btn ${this._cfg.modeIndex === 3 ? 'selected' : ''}" data-mode="3">
+                <strong>${Localization.t('modeTeam')}</strong>
+                <span>${Localization.t('modeTeamDesc')}</span>
+              </button>
+              <button class="neo-mode-btn ${this._cfg.modeIndex === 4 ? 'selected' : ''}" data-mode="4">
+                <strong>${Localization.t('modeInfection')}</strong>
+                <span>${Localization.t('modeInfectionDesc')}</span>
+              </button>
+              <button class="neo-mode-btn ${this._cfg.modeIndex === 5 ? 'selected' : ''}" data-mode="5">
+                <strong>${Localization.t('modeSurvivor')}</strong>
+                <span>${Localization.t('modeSurvivorDesc')}</span>
               </button>
             </div>
           </div>

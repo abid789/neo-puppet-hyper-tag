@@ -9,6 +9,9 @@ import type { GameMode } from './Modes/GameMode';
 import { HunterPointRush } from './Modes/HunterPointRush';
 import { HotBombTag } from './Modes/HotBombTag';
 import { CrownKeepAway } from './Modes/CrownKeepAway';
+import { TeamTag } from './Modes/TeamTag';
+import { InfectionMode } from './Modes/InfectionMode';
+import { LastSurvivor } from './Modes/LastSurvivor';
 import { TagRulesEngine } from './TagRulesEngine';
 import { ScoringEngine, type PlayerMatchStats } from './ScoringEngine';
 import type { MapManager } from '../maps/MapManager';
@@ -49,6 +52,9 @@ export class MatchController {
     new HunterPointRush(),
     new HotBombTag(),
     new CrownKeepAway(),
+    new TeamTag(),
+    new InfectionMode(),
+    new LastSurvivor(),
   ];
   private _currentModeIndex = 0;
 
@@ -160,6 +166,14 @@ export class MatchController {
     this._roundTimeRemaining = seconds;
   }
 
+  public setGameMode(index: number): void {
+    if (index >= 0 && index < this._modes.length && index !== this._currentModeIndex) {
+      this.currentMode.destroy();
+      this._currentModeIndex = index;
+      this.startMatch();
+    }
+  }
+
   public cycleGameMode(): void {
     this.currentMode.destroy();
     this._currentModeIndex = (this._currentModeIndex + 1) % this._modes.length;
@@ -208,7 +222,9 @@ export class MatchController {
         // Run active mode logic
         this.currentMode.update(dt, this._puppets, this._tagRules, this._scoring);
 
-        if (this._roundTimeRemaining <= 0) {
+        const earlyRoundOver = this.currentMode.isRoundOver?.() ?? false;
+
+        if (this._roundTimeRemaining <= 0 || earlyRoundOver) {
           this._transitionTo('ROUND_SUMMARY_PODIUM', 5.5);
         }
         break;
@@ -250,7 +266,20 @@ export class MatchController {
       const formatted = `${mins}:${secs.toString().padStart(2, '0')}`;
       const isCritical = this._roundTimeRemaining <= 15.0;
 
-      this._timerText.text = `[${this.currentMode.name}]   TIME: ${formatted}`;
+      if (this.currentMode.id === 'team_tag') {
+        const teamScores = this.currentMode.getTeamScores?.(this._scoring);
+        if (teamScores) {
+          this._timerText.text = `[RED: ${teamScores.red} | BLUE: ${teamScores.blue}]   TIME: ${formatted}`;
+        } else {
+          this._timerText.text = `[${this.currentMode.name}]   TIME: ${formatted}`;
+        }
+      } else if (this.currentMode.id === 'last_survivor') {
+        const cullSec = this.currentMode.getEliminationCountdown?.();
+        const cullText = cullSec !== undefined && cullSec !== null ? `  [CULL: ${Math.ceil(cullSec)}s]` : '';
+        this._timerText.text = `[LAST SURVIVOR]${cullText}   TIME: ${formatted}`;
+      } else {
+        this._timerText.text = `[${this.currentMode.name}]   TIME: ${formatted}`;
+      }
       this._timerText.style.fill = isCritical ? '#ff0066' : '#00ffff';
       this._timerText.visible = true;
 

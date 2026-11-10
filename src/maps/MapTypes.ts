@@ -16,7 +16,10 @@ export type ParallaxBackdropKind =
   | 'orbital_stars'
   | 'volcanic_cavern'
   | 'glacier_mirror'
-  | 'skyline_rain';
+  | 'skyline_rain'
+  | 'underwater_ruins'
+  | 'desert_dunes'
+  | 'haunted_carnival';
 
 export interface ParallaxLayerDef {
   kind:       ParallaxBackdropKind;
@@ -31,7 +34,10 @@ export type WeatherParticleKind =
   | 'volcanic_embers'
   | 'orbital_dust'
   | 'cryo_frost'
-  | 'neon_sparks';
+  | 'neon_sparks'
+  | 'bubbles'
+  | 'sandstorm'
+  | 'carnival_confetti';
 
 export interface WeatherConfig {
   kind:    WeatherParticleKind;
@@ -198,6 +204,26 @@ export interface LowGravityDomeDef {
   scale:  number; // 0.35 = 35% of normal gravity
 }
 
+export interface SlowZoneDef {
+  id:     string;
+  x:      number;
+  y:      number;
+  w:      number;
+  h:      number;
+  factor: number; // e.g. 0.45 = 45% speed
+  color?: number;
+}
+
+export interface ControlFlipZoneDef {
+  id:          string;
+  x:           number;
+  y:           number;
+  w:           number;
+  h:           number;
+  durationSec: number; // e.g. 2.0s
+  color?:      number;
+}
+
 export interface MapBounds {
   minX: number;
   maxX: number;
@@ -231,6 +257,8 @@ export interface MapDefinition {
   ziplines?:           ZiplineDef[];
   windGusts?:          WindGustConfig;
   lowGravityDomes?:    LowGravityDomeDef[];
+  slowZones?:          SlowZoneDef[];
+  controlFlipZones?:   ControlFlipZoneDef[];
 }
 
 export interface MapCarouselItem {

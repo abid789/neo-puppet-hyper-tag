@@ -52,6 +52,12 @@ export interface TranslationDictionary {
   modeBombDesc:      string;
   modeCrown:         string;
   modeCrownDesc:     string;
+  modeTeam:          string;
+  modeTeamDesc:      string;
+  modeInfection:     string;
+  modeInfectionDesc: string;
+  modeSurvivor:      string;
+  modeSurvivorDesc:  string;
 
   // Modifiers
   modNormal:         string;
@@ -157,6 +163,12 @@ const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     modeBombDesc:      'Holding the Neon Core ticks down from 15s. Tag to pass before it detonates!',
     modeCrown:         'CROWN KEEP-AWAY',
     modeCrownDesc:     'Hold the golden crown for +25pts/sec and 20% faster dash cooldown.',
+    modeTeam:          'TEAM TAG (RED VS BLUE)',
+    modeTeamDesc:      'Two teams compete. Tag opposing members to rack up points for your team!',
+    modeInfection:     'OUTBREAK INFECTION',
+    modeInfectionDesc: 'One player is infected. Every tag converts a human to the zombie horde. Survive!',
+    modeSurvivor:      'LAST SURVIVOR ELIMINATION',
+    modeSurvivorDesc:  'Lowest score eliminated every 20s. Last player standing wins!',
 
     modNormal:         'STANDARD 1.0X',
     modTurbo:          'TURBO OVERDRIVE 1.25X',
@@ -253,6 +265,12 @@ const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     modeBombDesc:      '১৫ সেকেন্ডের বোমার কোরটি অন্যকে ট্যাগ করে দিন, বিস্ফোরণের আগেই!',
     modeCrown:         'ক্রাউন কিপ-অ্যাওয়ে',
     modeCrownDesc:     'স্বর্ণমুকুট ধরে রাখলে প্রতি সেকেন্ডে ২৫ পয়েন্ট এবং ড্যাশ কুলডাউন কমে।',
+    modeTeam:          'টিম ট্যাগ (লাল বনাম নীল)',
+    modeTeamDesc:      'দুই দলের লড়াই। প্রতিপক্ষের খেলোয়াড়দের ট্যাগ করে দলের জন্য পয়েন্ট অর্জন করুন!',
+    modeInfection:     'ইনফেকশন আউটব্রেক',
+    modeInfectionDesc: 'একজন সংক্রমিত থাকে। প্রতিটি ট্যাগে আক্রান্তের দল বাড়ে। শেষ মানব হিসেবে টিকে থাকুন!',
+    modeSurvivor:      'লাস্ট সারভাইভার এলিমিনেশন',
+    modeSurvivorDesc:  'প্রতি ২০ সেকেন্ডে সর্বনিম্ন পয়েন্টধারী ধ্বংস হয়ে যাবে। শেষ বেঁচে থাকা খেলোয়াড় বিজয়ী!',
 
     modNormal:         'স্বাভাবিক ১.০ গুণ',
     modTurbo:          'টার্বো স্পিড ১.২৫ গুণ',

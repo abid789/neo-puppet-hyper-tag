@@ -91,6 +91,9 @@ export class Puppet implements ITrackedEntity {
   private _hasCrown = false;
   private _bombTimer: number | null = null;
   private _dashCooldownMultiplier = 1.0;
+  private _slowdownMultiplier = 1.0;
+  private _invertControlsTimer = 0;
+  private _isEliminated = false;
 
   private readonly _keyMap: KeyMap;
   private readonly _keysDown: Set<string> = new Set();
@@ -248,13 +251,18 @@ export class Puppet implements ITrackedEntity {
       this._input.attack = this._keysDown.has(this._keyMap.attack);
     }
 
-    // Freeze inputs during stun or match intro countdown
-    if (this._stunTimer > 0 || this._inputFrozen) {
+    // Freeze inputs during stun or match intro countdown or elimination
+    if (this._stunTimer > 0 || this._inputFrozen || this._isEliminated) {
       this._input.moveLeft = false;
       this._input.moveRight = false;
       this._input.jump = false;
       this._input.dash = false;
       this._input.attack = false;
+    } else if (this._invertControlsTimer > 0) {
+      this._invertControlsTimer = Math.max(0, this._invertControlsTimer - dt);
+      const temp = this._input.moveLeft;
+      this._input.moveLeft = this._input.moveRight;
+      this._input.moveRight = temp;
     }
 
     if (this._stunTimer > 0) {
@@ -325,7 +333,7 @@ export class Puppet implements ITrackedEntity {
     // 5. Locomotion logic
     if (this._input.moveLeft || this._input.moveRight) {
       this._facingRight = this._input.moveRight;
-      const targetSpeed = (this._facingRight ? 5.5 : -5.5) * this._speedMultiplier + this._conveyorVx;
+      const targetSpeed = (this._facingRight ? 5.5 : -5.5) * this._speedMultiplier * this._slowdownMultiplier + this._conveyorVx;
       const velDiff = targetSpeed - linvel.x;
       torso.applyImpulse({ x: velDiff * 0.48, y: 0 }, true);
 
@@ -347,8 +355,9 @@ export class Puppet implements ITrackedEntity {
       }
     }
 
-    // Reset frame-based conveyor influence
+    // Reset frame-based conveyor influence and environmental slowdown
     this._conveyorVx = 0;
+    this._slowdownMultiplier = 1.0;
 
     // 5. Jump
     if (this._input.jump && this._grounded && this._jumpCooldown <= 0) {
@@ -772,6 +781,71 @@ export class Puppet implements ITrackedEntity {
   public resetLocomotion(): void {
     this._conveyorVx = 0;
     this._lowGravityActive = false;
+    this._slowdownMultiplier = 1.0;
+    this._invertControlsTimer = 0;
+    this._isEliminated = false;
+  }
+
+  public setSlowdown(factor: number): void {
+    this._slowdownMultiplier = Math.min(this._slowdownMultiplier, factor);
+  }
+
+  public invertControls(durationSec = 2.0): void {
+    this._invertControlsTimer = Math.max(this._invertControlsTimer, durationSec);
+    const pos = this._bodies.torso.translation();
+    this._particles.emitBurst(12, {
+      x: pos.x * PPM,
+      y: pos.y * PPM - 20,
+      vx: 0,
+      vy: -30,
+      life: 0.35,
+      size: 3.5,
+      color: 0xff00aa,
+      alpha: 1.0,
+      kind: 'spark',
+      gravity: 0,
+    });
+  }
+
+  public isControlsInverted(): boolean {
+    return this._invertControlsTimer > 0;
+  }
+
+  public eliminate(): void {
+    if (this._isEliminated) return;
+    this._isEliminated = true;
+    this.setInputFrozen(true);
+    this._state = 'tagged';
+    this._skin.triggerTagFlash();
+    this.triggerBackflip();
+
+    // Ragdoll blast out of arena
+    const dir = (Math.random() - 0.5) * 22;
+    this._bodies.torso.applyImpulse({ x: dir, y: -26 }, true);
+    this._bodies.torso.applyTorqueImpulse((Math.random() - 0.5) * 35, true);
+
+    const pos = this._bodies.torso.translation();
+    this._particles.emitBurst(32, {
+      x: pos.x * PPM,
+      y: pos.y * PPM,
+      vx: dir * 5,
+      vy: -50,
+      life: 0.6,
+      size: 5,
+      color: 0xff0033,
+      alpha: 1.0,
+      kind: 'spark',
+      gravity: 60,
+    }, 150);
+  }
+
+  public isEliminated(): boolean {
+    return this._isEliminated;
+  }
+
+  public resetElimination(): void {
+    this._isEliminated = false;
+    this.setInputFrozen(false);
   }
 
   // ── ITrackedEntity implementation ──────────────────────────────────────────
