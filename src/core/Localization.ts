@@ -77,6 +77,23 @@ export interface TranslationDictionary {
   persCautious:      string;
   persRandom:        string;
 
+  // Friend Group Features
+  roomPasscode:      string;
+  enterPasscode:     string;
+  incorrectPasscode: string;
+  passcodeBlocked:   string;
+  copyPasscode:      string;
+  passcodeCopied:    string;
+  rematchBtn:        string;
+  rematchRequested:  string;
+  partyChat:         string;
+  chatPlaceholder:   string;
+  chatRateLimit:     string;
+  editNickname:      string;
+  setNicknameTitle:  string;
+  todayMatches:      string;
+  rivalryMatrix:     string;
+
   // HUD
   timeRemaining:     string;
   score:             string;
@@ -193,6 +210,22 @@ const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     persCautious:      'CAUTIOUS',
     persRandom:        'RANDOM',
 
+    roomPasscode:      'ROOM PASSCODE',
+    enterPasscode:     'ENTER ROOM PASSCODE',
+    incorrectPasscode: 'INCORRECT PASSCODE',
+    passcodeBlocked:   'TOO MANY ATTEMPTS. LOCKED FOR 60s.',
+    copyPasscode:      'COPY PASSCODE',
+    passcodeCopied:    'PASSCODE COPIED TO CLIPBOARD',
+    rematchBtn:        '🔄 REMATCH',
+    rematchRequested:  'HOST CALLED REMATCH! RETURNING TO LOBBY…',
+    partyChat:         'PARTY CHAT',
+    chatPlaceholder:   'Type a message (max 140 chars)…',
+    chatRateLimit:     'RATE LIMITED: 1 message per second.',
+    editNickname:      'EDIT NICKNAME',
+    setNicknameTitle:  'SET FRIEND NICKNAME (DEVICE ONLY)',
+    todayMatches:      "TODAY'S MATCHES",
+    rivalryMatrix:     'RIVALRY MATRIX // PAIR SUMMARY',
+
     timeRemaining:     'TIME REMAINING',
     score:             'PTS',
     dashReady:         'DASH READY',
@@ -301,6 +334,22 @@ const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     persAggressive:    'আক্রমণাত্মক',
     persCautious:      'সতর্ক',
     persRandom:        'এলোমেলো',
+
+    roomPasscode:      'রুম পাসকোড',
+    enterPasscode:     'রুম পাসকোড দিন',
+    incorrectPasscode: 'ভুল পাসকোড!',
+    passcodeBlocked:   'অতিরিক্ত ভুল প্রচেষ্টা। ৬০ সেকেন্ড অপেক্ষা করুন।',
+    copyPasscode:      'পাসকোড কপি',
+    passcodeCopied:    'পাসকোড ক্লিপবোর্ডে কপি করা হয়েছে',
+    rematchBtn:        '🔄 পুনরায় ম্যাচ (রিম্যাচ)',
+    rematchRequested:  'হোস্ট রিম্যাচ ডেকেছেন! লবিতে ফিরছি…',
+    partyChat:         'পার্টি চ্যাট',
+    chatPlaceholder:   'বার্তা লিখুন (সর্বোচ্চ ১৪০ বর্ণ)…',
+    chatRateLimit:     'গতি সীমিত: প্রতি সেকেন্ডে ১টি বার্তা।',
+    editNickname:      'নাম পরিবর্তন',
+    setNicknameTitle:  'বন্ধুর নাম নির্ধারণ (শুধুমাত্র এই ডিভাইসে)',
+    todayMatches:      'আজকের ম্যাচসমূহ',
+    rivalryMatrix:     'দ্বৈত প্রতিদ্বন্দ্বিতা রেকর্ড',
 
     timeRemaining:     'অবশিষ্ট সময়',
     score:             'পয়েন্ট',

@@ -63,6 +63,212 @@ export class RoomLinkManager {
     return this._copyToClipboard(roomCode);
   }
 
+  /**
+   * Copies room passcode to clipboard.
+   */
+  public static async copyPasscode(passcode: string): Promise<boolean> {
+    return this._copyToClipboard(passcode);
+  }
+
+  /**
+   * Generates a salted SHA-256 hash using the Web Crypto API. Never stores plain text.
+   */
+  public static async hashPasscode(roomCode: string, passcode: string): Promise<string> {
+    const enc = new TextEncoder();
+    const data = enc.encode(`neo_salt_${roomCode}:${passcode}`);
+    const hashBuf = await window.crypto.subtle.digest('SHA-256', data);
+    const hashArr = Array.from(new Uint8Array(hashBuf));
+    return hashArr.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // ── Rate Limiting (5 attempts per minute, 60s block) ─────────────────────────
+  private static _attemptTimestamps: number[] = [];
+  private static _blockedUntil = 0;
+
+  public static getRateLimitStatus(): { blocked: boolean; remainingSec: number; remainingAttempts: number } {
+    const now = Date.now();
+    if (now < this._blockedUntil) {
+      return {
+        blocked: true,
+        remainingSec: Math.ceil((this._blockedUntil - now) / 1000),
+        remainingAttempts: 0,
+      };
+    }
+    this._attemptTimestamps = this._attemptTimestamps.filter(t => now - t < 60000);
+    const remaining = Math.max(0, 5 - this._attemptTimestamps.length);
+    return { blocked: false, remainingSec: 0, remainingAttempts: remaining };
+  }
+
+  public static recordFailedAttempt(): { blocked: boolean; remainingSec: number } {
+    const now = Date.now();
+    this._attemptTimestamps.push(now);
+    if (this._attemptTimestamps.length >= 5) {
+      this._blockedUntil = now + 60000;
+      return { blocked: true, remainingSec: 60 };
+    }
+    return { blocked: false, remainingSec: 0 };
+  }
+
+  /**
+   * Prompts client for passcode when opening a protected ?room= link.
+   */
+  public static async promptForPasscode(roomCode: string, expectedHash: string): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      const modal = document.createElement('div');
+      modal.id = 'neo-passcode-modal';
+      modal.innerHTML = `
+        <div class="neo-modal-backdrop"></div>
+        <div class="neo-modal-content">
+          <h2 class="neo-modal-title" style="color: #ffee00;">🔒 PROTECTED ARENA</h2>
+          <p class="neo-modal-sub">Room <strong>${roomCode}</strong> is passcode-protected. Enter 4-8 character passcode:</p>
+          
+          <div class="neo-form-group">
+            <input type="password" id="neo-pass-input" maxlength="8" placeholder="PASSCODE" autofocus autocomplete="off" />
+            <div id="neo-pass-error" style="color:#ff0055; font-size:11px; margin-top:6px; min-height:16px;"></div>
+          </div>
+
+          <div style="display:flex; gap:10px;">
+            <button id="neo-pass-submit-btn" class="neo-btn-primary">AUTHENTICATE & ENTER</button>
+            <button id="neo-pass-cancel-btn" class="neo-btn-secondary" style="background:#222; color:#ccc; border:1px solid #444; border-radius:4px; padding:10px 14px; font-family:'Orbitron',monospace; cursor:pointer;">CANCEL</button>
+          </div>
+        </div>
+      `;
+
+      this._injectPasscodeStyles();
+      document.body.appendChild(modal);
+
+      const input = modal.querySelector('#neo-pass-input') as HTMLInputElement;
+      const errorDiv = modal.querySelector('#neo-pass-error') as HTMLDivElement;
+      const submitBtn = modal.querySelector('#neo-pass-submit-btn') as HTMLButtonElement;
+      const cancelBtn = modal.querySelector('#neo-pass-cancel-btn') as HTMLButtonElement;
+
+      let timerId: number | null = null;
+      const updateRateLimitDisplay = () => {
+        const status = this.getRateLimitStatus();
+        if (status.blocked) {
+          submitBtn.disabled = true;
+          input.disabled = true;
+          errorDiv.textContent = `TOO MANY ATTEMPTS. BLOCKED FOR ${status.remainingSec}s.`;
+        } else {
+          submitBtn.disabled = false;
+          input.disabled = false;
+        }
+      };
+
+      updateRateLimitDisplay();
+      timerId = window.setInterval(updateRateLimitDisplay, 1000);
+
+      const cleanup = () => {
+        if (timerId !== null) clearInterval(timerId);
+        modal.remove();
+      };
+
+      cancelBtn.onclick = () => {
+        cleanup();
+        resolve(false);
+      };
+
+      submitBtn.onclick = async () => {
+        const rateStatus = this.getRateLimitStatus();
+        if (rateStatus.blocked) return;
+
+        const val = input.value.trim();
+        if (val.length < 4 || val.length > 8) {
+          errorDiv.textContent = 'Passcode must be between 4 and 8 characters.';
+          return;
+        }
+
+        const hashed = await this.hashPasscode(roomCode, val);
+        if (hashed === expectedHash) {
+          cleanup();
+          resolve(true);
+        } else {
+          const failStatus = this.recordFailedAttempt();
+          if (failStatus.blocked) {
+            updateRateLimitDisplay();
+          } else {
+            const left = 5 - this._attemptTimestamps.length;
+            errorDiv.textContent = `Incorrect passcode! (${left} attempt${left === 1 ? '' : 's'} remaining)`;
+            input.value = '';
+            input.focus();
+          }
+        }
+      };
+
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') submitBtn.click();
+      };
+    });
+  }
+
+  /**
+   * Prompts host for optional passcode when creating room.
+   */
+  public static async promptCreateRoomPasscode(): Promise<string> {
+    return new Promise<string>((resolve) => {
+      const modal = document.createElement('div');
+      modal.id = 'neo-create-pass-modal';
+      modal.innerHTML = `
+        <div class="neo-modal-backdrop"></div>
+        <div class="neo-modal-content">
+          <h2 class="neo-modal-title">⚡ PRIVATE ROOM PASSCODE</h2>
+          <p class="neo-modal-sub">Set an optional 4-8 character passcode for your party, or leave empty for open room:</p>
+          
+          <div class="neo-form-group">
+            <input type="text" id="neo-create-pass-input" maxlength="8" placeholder="OPTIONAL (e.g. 7788)" autofocus autocomplete="off" />
+            <div id="neo-create-pass-error" style="color:#ff0055; font-size:11px; margin-top:6px; min-height:16px;"></div>
+          </div>
+
+          <div style="display:flex; gap:10px;">
+            <button id="neo-create-pass-confirm" class="neo-btn-primary">CREATE ROOM</button>
+            <button id="neo-create-pass-cancel" class="neo-btn-secondary" style="background:#222; color:#ccc; border:1px solid #444; border-radius:4px; padding:10px 14px; font-family:'Orbitron',monospace; cursor:pointer;">CANCEL</button>
+          </div>
+        </div>
+      `;
+
+      this._injectPasscodeStyles();
+      document.body.appendChild(modal);
+
+      const input = modal.querySelector('#neo-create-pass-input') as HTMLInputElement;
+      const errorDiv = modal.querySelector('#neo-create-pass-error') as HTMLDivElement;
+      const confirmBtn = modal.querySelector('#neo-create-pass-confirm') as HTMLButtonElement;
+      const cancelBtn = modal.querySelector('#neo-create-pass-cancel') as HTMLButtonElement;
+
+      cancelBtn.onclick = () => {
+        modal.remove();
+        resolve(''); // Cancel or empty
+      };
+
+      confirmBtn.onclick = () => {
+        const val = input.value.trim();
+        if (val.length > 0 && (val.length < 4 || val.length > 8)) {
+          errorDiv.textContent = 'Passcode must be 4 to 8 characters, or leave blank.';
+          return;
+        }
+        modal.remove();
+        resolve(val);
+      };
+
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') confirmBtn.click();
+      };
+    });
+  }
+
+  private static _injectPasscodeStyles(): void {
+    if (document.getElementById('neo-passcode-style')) return;
+    const style = document.createElement('style');
+    style.id = 'neo-passcode-style';
+    style.textContent = `
+      #neo-passcode-modal, #neo-create-pass-modal {
+        position: fixed; inset: 0; z-index: 12000;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Orbitron', monospace; color: #fff;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   private static async _copyToClipboard(text: string): Promise<boolean> {
     if (navigator.clipboard && window.isSecureContext) {
       try {

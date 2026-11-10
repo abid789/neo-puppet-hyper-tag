@@ -8,7 +8,9 @@ import { HUD } from './HUD';
 import { PodiumScreen, type PodiumResultItem } from './PodiumScreen';
 import { SettingsModal } from './SettingsModal';
 import { CloudSetupModal } from './CloudSetupModal';
+import { SessionHistoryScreen } from './SessionHistoryScreen';
 import { SoundEngine } from '../audio/SoundEngine';
+import { RoomLinkManager } from '../network/RoomLinkManager';
 
 export type ScreenState = 'MENU' | 'LOBBY' | 'MATCH' | 'PODIUM';
 
@@ -22,9 +24,11 @@ export class UIManager {
   public readonly podium:     PodiumScreen;
   public readonly settings:   SettingsModal;
   public readonly cloudSetup: CloudSetupModal;
+  public readonly sessionHistoryScreen: SessionHistoryScreen;
 
   private _onStartGameCb:  ((cfg: MatchCustomizerConfig) => void) | null = null;
   private _onLeavePartyCb: (() => void) | null = null;
+  private _onRematchCb:    (() => void) | null = null;
 
   constructor() {
     this.menu       = new MainMenu();
@@ -34,6 +38,7 @@ export class UIManager {
     this.podium     = new PodiumScreen();
     this.settings   = new SettingsModal();
     this.cloudSetup = new CloudSetupModal();
+    this.sessionHistoryScreen = new SessionHistoryScreen();
 
     this._setupScreenWiring();
   }
@@ -45,9 +50,11 @@ export class UIManager {
   public setCallbacks(callbacks: {
     onStartGame:  (cfg: MatchCustomizerConfig) => void;
     onLeaveParty: () => void;
+    onRematch?:   () => void;
   }): void {
     this._onStartGameCb  = callbacks.onStartGame;
     this._onLeavePartyCb = callbacks.onLeaveParty;
+    this._onRematchCb    = callbacks.onRematch ?? null;
   }
 
   private _setupScreenWiring(): void {
@@ -87,9 +94,15 @@ export class UIManager {
         SoundEngine.getInstance().playFootstep('metal');
         this.podium.showRecapModal();
       },
+      onSessionHistory: () => {
+        SoundEngine.getInstance().playFootstep('metal');
+        this.sessionHistoryScreen.show();
+      },
       onHostLobby: () => {
         SoundEngine.getInstance().playJump(false);
-        this.goToLobby(true);
+        RoomLinkManager.promptCreateRoomPasscode().then(passcode => {
+          this.goToLobby(true, 'TAG-' + Math.floor(1000 + Math.random() * 9000), passcode);
+        });
       },
       onJoinRoom: () => {
         SoundEngine.getInstance().playFootstep('metal');
@@ -165,6 +178,10 @@ export class UIManager {
         this.goToMenu();
         if (this._onLeavePartyCb) this._onLeavePartyCb();
       },
+      () => {
+        // Rematch
+        if (this._onRematchCb) this._onRematchCb();
+      },
     );
   }
 
@@ -179,12 +196,12 @@ export class UIManager {
     SoundEngine.getInstance().stopMusic();
   }
 
-  public goToLobby(isHost = true, roomCode = 'TAG-8492'): void {
+  public goToLobby(isHost = true, roomCode = 'TAG-8492', passcode = '', isRematch = false): void {
     this._state = 'LOBBY';
     this.menu.hide();
     this.podium.hide();
     this.hud.setVisible(false);
-    this.lobby.show(isHost, roomCode);
+    this.lobby.show(isHost, roomCode, passcode, isRematch);
     SoundEngine.getInstance().startMusic();
   }
 

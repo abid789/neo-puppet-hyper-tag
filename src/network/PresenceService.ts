@@ -18,7 +18,8 @@ export interface PlayerPresence {
 }
 
 export class PresenceService {
-  private static readonly FRIENDS_KEY = 'neo-puppet-friends';
+  public static readonly FRIENDS_KEY = 'neo-puppet-friends';
+  public static readonly NICKNAMES_KEY = 'neo-puppet-friend-nicknames';
 
   private readonly _profile: UserProfile;
   private _status: PlayerStatus = 'ONLINE_IDLE';
@@ -212,6 +213,44 @@ export class PresenceService {
 
   public isFriend(friendId: string): boolean {
     return this.getFriends().includes(friendId);
+  }
+
+  // ── Friend Nicknames (stored only in localStorage under neo-puppet-friend-nicknames) ─
+  public getFriendNickname(playerId: string): string | null {
+    try {
+      const raw = localStorage.getItem(PresenceService.NICKNAMES_KEY);
+      if (!raw) return null;
+      const map = JSON.parse(raw) as Record<string, string>;
+      return map[playerId] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  public setFriendNickname(playerId: string, nickname: string): void {
+    try {
+      const raw = localStorage.getItem(PresenceService.NICKNAMES_KEY);
+      const map = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+      const clean = nickname.trim();
+      if (clean) {
+        map[playerId] = clean;
+      } else {
+        delete map[playerId];
+      }
+      localStorage.setItem(PresenceService.NICKNAMES_KEY, JSON.stringify(map));
+      this._notifyListeners();
+    } catch {
+      /* noop */
+    }
+  }
+
+  public getAllFriendNicknames(): Record<string, string> {
+    try {
+      const raw = localStorage.getItem(PresenceService.NICKNAMES_KEY);
+      return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    } catch {
+      return {};
+    }
   }
 
   public destroy(): void {

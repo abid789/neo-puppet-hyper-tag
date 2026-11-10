@@ -89,7 +89,8 @@ export class LobbyUI {
     // Create Room
     const createBtn = bar.querySelector('#neo-btn-create-room') as HTMLButtonElement;
     createBtn.onclick = async () => {
-      const code = await this._net.createRoom();
+      const passcode = await RoomLinkManager.promptCreateRoomPasscode();
+      const code = await this._net.createRoom(undefined, passcode);
       RoomLinkManager.setRoomInUrl(code);
       this.update();
       this.showToast(`Room created: ${code}`);
@@ -102,6 +103,14 @@ export class LobbyUI {
     joinBtn.onclick = async () => {
       const target = inputCode.value.trim().toUpperCase();
       if (target) {
+        const passHash = await this._net.checkRoomProtected(target);
+        if (passHash) {
+          const auth = await RoomLinkManager.promptForPasscode(target, passHash);
+          if (!auth) {
+            this.showToast('Passcode rejected');
+            return;
+          }
+        }
         const ok = await this._net.joinRoom(target);
         if (ok) {
           RoomLinkManager.setRoomInUrl(target);

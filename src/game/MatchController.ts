@@ -15,6 +15,7 @@ import { LastSurvivor } from './Modes/LastSurvivor';
 import { TagRulesEngine } from './TagRulesEngine';
 import { ScoringEngine, type PlayerMatchStats } from './ScoringEngine';
 import { MatchRecapManager } from './MatchRecap';
+import { SessionHistory } from './SessionHistory';
 import type { MapManager } from '../maps/MapManager';
 import type { Camera } from '../graphics/Camera';
 import type { Engine } from '../core/Engine';
@@ -161,6 +162,15 @@ export class MatchController {
     this.currentMode.init(this._puppets);
 
     this._transitionTo('PRE_MATCH_INTRO', 2.8);
+  }
+
+  public resetMatch(): void {
+    this._scoring.reset();
+    this._tagRules.reset();
+    this._tagFeed.length = 0;
+    for (let i = 0; i < this._puppets.length; i++) {
+      this._puppets[i].resetMatchState();
+    }
   }
 
   public setRoundDuration(seconds: number): void {
@@ -442,6 +452,18 @@ export class MatchController {
       durationSec:  this._roundDuration,
       players,
       winnerSpawnX: winnerSpawn,
+    });
+
+    SessionHistory.getInstance().recordMatch({
+      modeName: this.currentMode.name,
+      mapName:  map.name,
+      players:  players.map(p => ({
+        id:       `pilot_${p.playerIndex}`,
+        name:     p.name,
+        color:    p.color,
+        score:    p.score,
+        tagsMade: p.tagsGiven,
+      })),
     });
   }
 

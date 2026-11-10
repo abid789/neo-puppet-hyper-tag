@@ -324,6 +324,10 @@ export class PowerUpManager {
     this._decoys = [];
   }
 
+  public clearAll(): void {
+    this.clearOrbs();
+  }
+
   public destroy(): void {
     this.clearOrbs();
   }

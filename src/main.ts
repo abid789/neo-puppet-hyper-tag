@@ -25,6 +25,7 @@ import { InviteBanner } from './ui/InviteBanner';
 import { SocialPresencePanel } from './ui/SocialPresencePanel';
 import { EmoteWheel } from './ui/EmoteWheel';
 import { LobbyUI } from './ui/LobbyUI';
+import { ChatService } from './network/ChatService';
 
 // Phase 5 UI, Procedural Audio & Settings modules
 import { UIManager } from './ui/UIManager';
@@ -52,6 +53,7 @@ async function main(): Promise<void> {
 
   // Ensure pilot profile (prompts modal if first time opening URL)
   const userProfile = await RoomLinkManager.ensureUserProfile(net.playerId);
+  ChatService.getInstance().setLocalSender(userProfile.nickname, userProfile.avatarSkin);
 
   // ── Loading overlay ──────────────────────────────────────────────────────────
   const overlay = document.createElement('div');
@@ -243,6 +245,28 @@ async function main(): Promise<void> {
       lobbyUI.update();
       presence.updateStatus('ONLINE_IDLE');
     },
+    onRematch: () => {
+      matchController.resetMatch();
+      powerUpManager.clearAll();
+      for (let i = 0; i < botPool.length; i++) {
+        botPool[i].setPersonality(botPersonality);
+      }
+      net.sendEvent('REMATCH_REQUESTED', { roomCode: net.roomCode, passcode: net.roomPasscode });
+      uiManager.goToLobby(true, net.roomCode, net.roomPasscode, true);
+    },
+  });
+
+  // Handle incoming rematch requests from host
+  net.onEvent((eventType, payload) => {
+    if (eventType === 'REMATCH_REQUESTED') {
+      Toast.show('Host initiated rematch! Returning to lobby…');
+      matchController.resetMatch();
+      powerUpManager.clearAll();
+      for (let i = 0; i < botPool.length; i++) {
+        botPool[i].setPersonality(botPersonality);
+      }
+      uiManager.goToLobby(false, net.roomCode || String(payload.roomCode || ''), '', true);
+    }
   });
 
   // Handle incoming Game Invites
@@ -282,7 +306,7 @@ async function main(): Promise<void> {
   lobbyUI.setOnRoomStateChanged((roomCode, isHost) => {
     presence.updateStatus(roomCode ? 'IN_LOBBY' : 'ONLINE_IDLE', roomCode);
     if (roomCode) {
-      uiManager.goToLobby(isHost, roomCode);
+      uiManager.goToLobby(isHost, roomCode, net.roomPasscode);
     }
   });
 
@@ -291,9 +315,20 @@ async function main(): Promise<void> {
     engine.setPing(ping);
   });
 
-  // Initial navigation
+  // Initial navigation (checking passcode if protected)
   if (initialRoomFromUrl) {
-    net.joinRoom(initialRoomFromUrl).then((joined) => {
+    net.checkRoomProtected(initialRoomFromUrl).then(async (passHash) => {
+      if (passHash) {
+        const authorized = await RoomLinkManager.promptForPasscode(initialRoomFromUrl, passHash);
+        if (!authorized) {
+          Toast.show('Passcode verification failed. Returning to menu.');
+          RoomLinkManager.clearRoomFromUrl();
+          uiManager.goToMenu();
+          return;
+        }
+      }
+
+      const joined = await net.joinRoom(initialRoomFromUrl);
       if (joined) {
         lobbyUI.update();
         presence.updateStatus('IN_LOBBY', initialRoomFromUrl);
@@ -436,6 +471,14 @@ async function main(): Promise<void> {
 
         // Update Esports Match HUD
         if (uiManager.currentState === 'MATCH') {
+          const playerLabels = activePuppets.map((p) => {
+            const idx = p.getPlayerIndex();
+            if (idx === 0) {
+              return { realName: userProfile.nickname, playerId: userProfile.playerId };
+            }
+            return { realName: `AI BOT ${idx}` };
+          });
+
           uiManager.hud.update(
             activePuppets,
             matchController.scoringEngine,
@@ -443,6 +486,7 @@ async function main(): Promise<void> {
             matchController.currentMode.name,
             net.localPlayerIndex,
             matchController.currentMode,
+            playerLabels,
           );
         }
 

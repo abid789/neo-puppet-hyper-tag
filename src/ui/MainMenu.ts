@@ -14,29 +14,32 @@ export class MainMenu {
   private _onCustomizer: (() => void) | null = null;
   private _onSettings: (() => void) | null = null;
   private _onCloudSetup: (() => void) | null = null;
+  private _onSessionHistory: (() => void) | null = null;
 
   constructor() {
     this._injectStyles();
   }
 
   public setCallbacks(callbacks: {
-    onQuickMatch:   () => void;
-    onPracticeMode: () => void;
-    onShowRecap:    () => void;
-    onHostLobby:    () => void;
-    onJoinRoom:     () => void;
-    onCustomizer:   () => void;
-    onSettings:     () => void;
-    onCloudSetup:   () => void;
+    onQuickMatch:     () => void;
+    onPracticeMode:   () => void;
+    onShowRecap:      () => void;
+    onHostLobby:      () => void;
+    onJoinRoom:       () => void;
+    onCustomizer:     () => void;
+    onSettings:       () => void;
+    onCloudSetup:     () => void;
+    onSessionHistory: () => void;
   }): void {
-    this._onQuickMatch   = callbacks.onQuickMatch;
-    this._onPracticeMode = callbacks.onPracticeMode;
-    this._onShowRecap    = callbacks.onShowRecap;
-    this._onHostLobby    = callbacks.onHostLobby;
-    this._onJoinRoom     = callbacks.onJoinRoom;
-    this._onCustomizer   = callbacks.onCustomizer;
-    this._onSettings     = callbacks.onSettings;
-    this._onCloudSetup   = callbacks.onCloudSetup;
+    this._onQuickMatch     = callbacks.onQuickMatch;
+    this._onPracticeMode   = callbacks.onPracticeMode;
+    this._onShowRecap      = callbacks.onShowRecap;
+    this._onHostLobby      = callbacks.onHostLobby;
+    this._onJoinRoom       = callbacks.onJoinRoom;
+    this._onCustomizer     = callbacks.onCustomizer;
+    this._onSettings       = callbacks.onSettings;
+    this._onCloudSetup     = callbacks.onCloudSetup;
+    this._onSessionHistory = callbacks.onSessionHistory;
   }
 
   public show(): void {
@@ -58,6 +61,7 @@ export class MainMenu {
           <button id="btn-quick-match" class="neo-btn-hero primary">▶ ${Localization.t('playQuickMatch')}</button>
           <button id="btn-practice-mode" class="neo-btn-hero">🎯 ${Localization.t('practiceMode')}</button>
           <button id="btn-recap" class="neo-btn-hero">📊 ${Localization.t('matchRecap')}</button>
+          <button id="btn-session-history" class="neo-btn-hero">📅 ${Localization.t('todayMatches')}</button>
           <button id="btn-host-lobby" class="neo-btn-hero">⚡ ${Localization.t('hostLobby')}</button>
           <button id="btn-join-room" class="neo-btn-hero">🔗 ${Localization.t('joinRoom')}</button>
           <button id="btn-customizer" class="neo-btn-hero">⚙ ${Localization.t('customizer')}</button>
@@ -89,6 +93,10 @@ export class MainMenu {
 
     (menu.querySelector('#btn-recap') as HTMLElement).onclick = () => {
       if (this._onShowRecap) this._onShowRecap();
+    };
+
+    (menu.querySelector('#btn-session-history') as HTMLElement).onclick = () => {
+      if (this._onSessionHistory) this._onSessionHistory();
     };
 
     (menu.querySelector('#btn-host-lobby') as HTMLElement).onclick = () => {

@@ -20,14 +20,16 @@ export class PodiumScreen {
   private _container: HTMLDivElement | null = null;
   private _onPlayAgainCb: (() => void) | null = null;
   private _onLobbyCb: (() => void) | null = null;
+  private _onRematchCb: (() => void) | null = null;
 
   constructor() {
     this._injectStyles();
   }
 
-  public setCallbacks(onPlayAgain: () => void, onLobby: () => void): void {
+  public setCallbacks(onPlayAgain: () => void, onLobby: () => void, onRematch?: () => void): void {
     this._onPlayAgainCb = onPlayAgain;
     this._onLobbyCb = onLobby;
+    this._onRematchCb = onRematch ?? null;
   }
 
   public show(results: PodiumResultItem[]): void {
@@ -158,12 +160,19 @@ export class PodiumScreen {
       <!-- Action Footer -->
       <div class="neo-podium-footer">
         <button id="neo-podium-lobby" class="neo-btn-secondary">${Localization.t('backToMenu')}</button>
+        <button id="neo-podium-rematch" class="neo-btn-primary" style="background:#ff00aa; border:1px solid #ff00aa; color:#fff;">${Localization.t('rematchBtn')}</button>
         <button id="neo-podium-again" class="neo-btn-primary">▶ ${Localization.t('playAgain')}</button>
       </div>
     `;
 
     document.body.appendChild(screen);
     this._container = screen;
+
+    const rematchBtn = screen.querySelector('#neo-podium-rematch') as HTMLButtonElement;
+    rematchBtn.onclick = () => {
+      this.hide();
+      if (this._onRematchCb) this._onRematchCb();
+    };
 
     const againBtn = screen.querySelector('#neo-podium-again') as HTMLButtonElement;
     againBtn.onclick = () => {

@@ -5,6 +5,7 @@
 import {
   ref,
   set,
+  get,
   push,
   remove,
   onValue,
@@ -18,6 +19,50 @@ export class FirebaseSignaling {
 
   public isAvailable(): boolean {
     return getFirebaseDatabase() !== null;
+  }
+
+  /**
+   * Sets the salted SHA-256 passHash under /rooms/{roomCode}/passHash.
+   */
+  public async setRoomPassHash(roomCode: string, passHash: string): Promise<void> {
+    const db = getFirebaseDatabase();
+    if (db) {
+      const passRef = ref(db, `rooms/${roomCode}/passHash`);
+      await set(passRef, passHash);
+      onDisconnect(passRef).remove().catch(() => { /* noop */ });
+    }
+    // Also save in localStorage for local fallback support
+    try {
+      localStorage.setItem(`neo-puppet-passhash-${roomCode}`, passHash);
+    } catch {
+      /* noop */
+    }
+  }
+
+  /**
+   * Retrieves the salted SHA-256 passHash from /rooms/{roomCode}/passHash if protected.
+   */
+  public async getRoomPassHash(roomCode: string): Promise<string | null> {
+    const db = getFirebaseDatabase();
+    if (db) {
+      try {
+        const passRef = ref(db, `rooms/${roomCode}/passHash`);
+        const snap = await get(passRef);
+        const val = snap.val();
+        if (typeof val === 'string' && val.length > 0) {
+          return val;
+        }
+      } catch (err) {
+        console.warn('[FirebaseSignaling] Failed to fetch room passHash:', err);
+      }
+    }
+    // Local fallback check
+    try {
+      const local = localStorage.getItem(`neo-puppet-passhash-${roomCode}`);
+      return local || null;
+    } catch {
+      return null;
+    }
   }
 
   /**

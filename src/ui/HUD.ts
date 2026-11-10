@@ -59,6 +59,7 @@ export class HUD {
     modeName: string,
     localPlayerIndex = 0,
     currentMode?: GameMode,
+    playerLabels?: Array<{ realName: string; playerId?: string }>,
   ): void {
     // 1. Update Timer
     if (this._timerEl) {
@@ -134,11 +135,24 @@ export class HUD {
         statusIcon = `<span class="neo-status-pill bomb">💣 ${bTime}s</span>`;
       }
 
+      let rawNicknames: Record<string, string> = {};
+      try {
+        const raw = localStorage.getItem('neo-puppet-friend-nicknames');
+        if (raw) rawNicknames = JSON.parse(raw);
+      } catch {
+        /* noop */
+      }
+
+      const label = playerLabels?.[idx];
+      const realName = label?.realName || `P${idx + 1}`;
+      const customNick = label?.playerId ? rawNicknames[label.playerId] : (rawNicknames[realName] || null);
+      const displayName = customNick ? `${customNick} <small style="font-size:9px; color:#888;">(${realName})</small>` : realName;
+
       return `
         <div class="neo-hud-card ${idx === localPlayerIndex ? 'local' : ''}">
           <div class="neo-hud-avatar" style="background:${hexColor}; box-shadow:0 0 10px ${hexColor}"></div>
           <div class="neo-hud-info">
-            <div class="neo-hud-pname">P${idx + 1} ${statusIcon}</div>
+            <div class="neo-hud-pname">${displayName} ${statusIcon}</div>
             <div class="neo-hud-score">${score} ${badge}</div>
           </div>
         </div>

@@ -6,6 +6,7 @@ import { isFirebaseConfigured } from '../config/firebaseConfig';
 import { FirebaseSignaling } from './FirebaseSignaling';
 import { WebRTCPeer } from './WebRTCPeer';
 import { LocalBroadcastFallback } from './LocalBroadcastFallback';
+import { RoomLinkManager } from './RoomLinkManager';
 import {
   SnapshotCodec,
   PACKET_SNAPSHOT,
@@ -29,6 +30,7 @@ export class NetworkManager {
 
   private _localPlayerId: string;
   private _roomCode = '';
+  private _roomPasscode = '';
   private _isHost = true;
   private _localPlayerIndex = 0;
   private _transport: TransportKind = 'broadcast_channel';
@@ -74,6 +76,18 @@ export class NetworkManager {
     return this._roomCode;
   }
 
+  public get roomPasscode(): string {
+    return this._roomPasscode;
+  }
+
+  public setRoomPasscode(passcode: string): void {
+    this._roomPasscode = passcode;
+  }
+
+  public async checkRoomProtected(code: string): Promise<string | null> {
+    return this._signaling.getRoomPassHash(code);
+  }
+
   public get transport(): TransportKind {
     return this._transport;
   }
@@ -93,14 +107,20 @@ export class NetworkManager {
   }
 
   /**
-   * Host creates a new room with a code like TAG-8492.
+   * Host creates a new room with a code like TAG-8492 and an optional passcode.
    */
-  public async createRoom(preferredCode?: string): Promise<string> {
+  public async createRoom(preferredCode?: string, passcode?: string): Promise<string> {
     this.leaveRoom();
     const code = preferredCode ?? ('TAG-' + Math.floor(1000 + Math.random() * 9000));
     this._roomCode = code;
+    this._roomPasscode = passcode ?? '';
     this._isHost = true;
     this._localPlayerIndex = 0;
+
+    if (passcode && passcode.length >= 4) {
+      const hash = await RoomLinkManager.hashPasscode(code, passcode);
+      await this._signaling.setRoomPassHash(code, hash);
+    }
 
     const useFirebase = isFirebaseConfigured() && this._signaling.isAvailable();
 
@@ -202,6 +222,7 @@ export class NetworkManager {
     if (this._roomCode) {
       this._signaling.destroy(this._roomCode, this._isHost);
       this._roomCode = '';
+      this._roomPasscode = '';
     }
   }
 

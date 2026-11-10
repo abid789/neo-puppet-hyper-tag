@@ -130,6 +130,7 @@ export class SocialPresencePanel {
     listEl.innerHTML = players.map(p => {
       const isMe = p.playerId === this._profile.playerId;
       const isFriend = this._presence.isFriend(p.playerId);
+      const customNick = this._presence.getFriendNickname(p.playerId);
 
       // Status indicator color
       let statusColor = '#00ff88'; // LOBBY
@@ -147,9 +148,11 @@ export class SocialPresencePanel {
           <div class="neo-player-avatar" style="background:${p.avatarSkin}; box-shadow:0 0 6px ${p.avatarSkin}"></div>
           <div class="neo-player-info">
             <div class="neo-player-title">
-              <span class="neo-pname">${p.name}</span>
+              <span class="neo-pname">${customNick || p.name}</span>
+              ${customNick ? `<span class="neo-realname" style="font-size:10px; color:#888; font-family:'Rajdhani',sans-serif;">(${p.name})</span>` : ''}
               ${isFriend ? '<span class="neo-friend-tag">★ FRIEND</span>' : ''}
               ${isMe ? '<span class="neo-me-tag">(YOU)</span>' : ''}
+              ${!isMe ? `<button class="neo-btn-edit-nick" data-id="${p.playerId}" data-name="${p.name}" title="Set Nickname">✏</button>` : ''}
             </div>
             <div class="neo-player-status-row">
               <span class="neo-status-dot" style="background:${statusColor}; box-shadow:0 0 6px ${statusColor}"></span>
@@ -163,6 +166,22 @@ export class SocialPresencePanel {
         </div>
       `;
     }).join('');
+
+    // Attach edit nickname button listeners
+    listEl.querySelectorAll('.neo-btn-edit-nick').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-id');
+        const realName = btn.getAttribute('data-name') || 'Friend';
+        if (targetId) {
+          const current = this._presence.getFriendNickname(targetId) || '';
+          const newNick = window.prompt(`Set private nickname for ${realName} (saved only on this device):`, current);
+          if (newNick !== null) {
+            this._presence.setFriendNickname(targetId, newNick);
+            this._renderPlayerList();
+          }
+        }
+      });
+    });
 
     // Attach invite button click events
     listEl.querySelectorAll('.neo-btn-invite').forEach(btn => {
@@ -214,6 +233,10 @@ export class SocialPresencePanel {
       .neo-pilot-id { font-size: 9px; color: #888; font-family: 'Rajdhani', sans-serif; }
       .neo-btn-icon { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; }
       .neo-btn-icon:hover { color: #ff0066; }
+      .neo-btn-edit-nick {
+        background: none; border: none; color: #88ffff; font-size: 11px; cursor: pointer; margin-left: 4px; padding: 0 2px;
+      }
+      .neo-btn-edit-nick:hover { color: #ffff00; }
       .neo-friend-add-bar { display: flex; gap: 6px; }
       .neo-friend-add-bar input {
         flex: 1; background: rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 4px;
