@@ -2,9 +2,10 @@
 // Comprehensive settings modal with one-click performance presets,
 // granular graphics tuning, audio volumes, keybindings, and language switches.
 
-import { SettingsManager, type GraphicsPreset } from '../core/SettingsManager';
+import { SettingsManager, type GraphicsPreset, type TouchControlSetting } from '../core/SettingsManager';
 import { Localization } from '../core/Localization';
 import { checkKeybindConflict, ACTION_LABELS, type KeybindConfig } from '../config/keybinds';
+import { isTouchDevice } from '../core/DeviceInfo';
 import { Toast } from './Toast';
 
 export class SettingsModal {
@@ -213,15 +214,34 @@ export class SettingsModal {
 
       case 'controls':
         return `
-          <div class="neo-keybind-list">
-            ${(Object.keys(s.keybinds) as (keyof KeybindConfig)[]).map(action => `
-              <div class="neo-keybind-item">
-                <span class="neo-action-label">${ACTION_LABELS[action] ?? action}</span>
-                <button class="neo-keybind-btn ${this._listeningForAction === action ? 'listening' : ''}" data-action="${action}">
-                  ${this._listeningForAction === action ? 'PRESS KEY…' : s.keybinds[action]}
-                </button>
-              </div>
-            `).join('')}
+          <div class="neo-form-row">
+            <label>${Localization.t('touchControlsTitle') || 'TOUCH CONTROLS'}</label>
+            <div class="neo-preset-group">
+              <button class="neo-choice-btn ${s.touchControls === 'Auto' ? 'active' : ''}" data-touch-setting="Auto">
+                AUTO (${isTouchDevice() ? 'ON' : 'OFF'})
+              </button>
+              <button class="neo-choice-btn ${s.touchControls === 'On' ? 'active' : ''}" data-touch-setting="On">
+                ALWAYS ON
+              </button>
+              <button class="neo-choice-btn ${s.touchControls === 'Off' ? 'active' : ''}" data-touch-setting="Off">
+                ALWAYS OFF
+              </button>
+            </div>
+            <p class="neo-subtext">Auto automatically displays mobile dual-thumb touch controls when a touch device is detected.</p>
+          </div>
+
+          <div class="neo-form-row">
+            <label>KEYBOARD CONTROLS REMAPPING</label>
+            <div class="neo-keybind-list">
+              ${(Object.keys(s.keybinds) as (keyof KeybindConfig)[]).map(action => `
+                <div class="neo-keybind-item">
+                  <span class="neo-action-label">${ACTION_LABELS[action] ?? action}</span>
+                  <button class="neo-keybind-btn ${this._listeningForAction === action ? 'listening' : ''}" data-action="${action}">
+                    ${this._listeningForAction === action ? 'PRESS KEY…' : s.keybinds[action]}
+                  </button>
+                </div>
+              `).join('')}
+            </div>
           </div>
         `;
 
@@ -333,6 +353,16 @@ export class SettingsModal {
       bindSlider('#sfxvol-slider', '#sfxvol-val', 'sfxVolume');
       bindSlider('#musvol-slider', '#musvol-val', 'musicVolume');
     } else if (this._activeTab === 'controls') {
+      modal.querySelectorAll('.neo-choice-btn[data-touch-setting]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const setting = btn.getAttribute('data-touch-setting') as TouchControlSetting;
+          this._settings.update({ touchControls: setting });
+          Toast.show(`Touch Controls: ${setting}`);
+          this.close();
+          this._render();
+        });
+      });
+
       modal.querySelectorAll('.neo-keybind-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const action = btn.getAttribute('data-action') as keyof KeybindConfig;

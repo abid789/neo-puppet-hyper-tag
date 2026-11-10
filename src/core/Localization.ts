@@ -103,6 +103,10 @@ export interface TranslationDictionary {
   hostDisconnectedTitle:  string;
   hostDisconnectedDesc:   string;
 
+  // Mobile & Touch Controls
+  touchControlsTitle:     string;
+  rotatePhoneHint:        string;
+
   // HUD
   timeRemaining:     string;
   score:             string;
@@ -243,6 +247,9 @@ const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     hostDisconnectedTitle: 'HOST DISCONNECTED',
     hostDisconnectedDesc:  'The room host has disconnected. Host migration is disabled for casual rooms. Please return to the menu.',
 
+    touchControlsTitle:    'TOUCH CONTROLS',
+    rotatePhoneHint:       'Rotate your phone for the best experience',
+
     timeRemaining:     'TIME REMAINING',
     score:             'PTS',
     dashReady:         'DASH READY',
@@ -375,6 +382,9 @@ const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     rejoinBtn:             'রুমে পুনরায় যোগ দিন',
     hostDisconnectedTitle: 'হোস্ট বিচ্ছিন্ন হয়েছেন',
     hostDisconnectedDesc:  'রুমের হোস্ট সংযোগ বিচ্ছিন্ন হয়েছেন। অনুগ্রহ করে মূল মেনুতে ফিরে যান।',
+
+    touchControlsTitle:    'টাচ কন্ট্রোলস',
+    rotatePhoneHint:       'সেরা অভিজ্ঞতার জন্য ফোনটি অনুভূমিক (Landscape) করুন',
 
     timeRemaining:     'অবশিষ্ট সময়',
     score:             'পয়েন্ট',

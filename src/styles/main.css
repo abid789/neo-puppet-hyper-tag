@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   NEO-PUPPET: HYPER TAG — Global Styles
+   NEO-PUPPET: HYPER TAG — Global & Mobile Responsive Styles
    ══════════════════════════════════════════════════════════════ */
 
 /* ── Neon color palette ───────────────────────────────────────── */
@@ -27,7 +27,7 @@
   --font-body:    'Inter', sans-serif;
 }
 
-/* ── Reset & base ─────────────────────────────────────────────── */
+/* ── Reset & base with dvh viewport fix ───────────────────────── */
 *,
 *::before,
 *::after {
@@ -40,51 +40,59 @@ html,
 body {
   width: 100%;
   height: 100%;
+  height: 100dvh;
+  min-height: -webkit-fill-available;
   overflow: hidden;
+  overscroll-behavior: none;
   background-color: var(--bg-dark);
   color: var(--text-primary);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prevent text selection during gameplay */
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* ── App mount ────────────────────────────────────────────────── */
+/* ── App mount & Canvas ───────────────────────────────────────── */
 #app {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
-/* Pixi canvas inherits full viewport */
 #app canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
   touch-action: none;
+  overscroll-behavior: none;
 }
 
-/* ── Utility glow classes (used by any overlaid HTML) ─────────── */
+/* ── Utility glow classes ─────────────────────────────────────── */
 .glow-cyan  { text-shadow: var(--glow-cyan); }
 .glow-pink  { text-shadow: var(--glow-pink); }
 .glow-green { text-shadow: var(--glow-green); }
 
-/* ── Loading overlay (shown before WASM init) ─────────────────── */
+/* ── Loading overlay ──────────────────────────────────────────── */
 #loading-overlay {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100dvh;
   background: var(--bg-dark);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1.5rem;
-  z-index: 9999;
+  z-index: 19999;
   transition: opacity 0.6s ease;
 }
 
@@ -114,4 +122,83 @@ body {
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0; }
+}
+
+/* ── Mobile Responsive Overrides (360px to 480px Viewports) ──── */
+@media (max-width: 600px) {
+  /* Prevent horizontal scrolling on phone screens */
+  body, html {
+    overflow-x: hidden;
+  }
+
+  /* Safe Area insets for notch and bottom home indicator bar */
+  #neo-main-menu,
+  #neo-lobby-screen,
+  .neo-customizer-panel,
+  .neo-settings-panel,
+  .neo-podium-panel {
+    max-width: 96vw !important;
+    width: 96vw !important;
+    max-height: 92dvh !important;
+    padding: calc(14px + env(safe-area-inset-top, 0px))
+             calc(12px + env(safe-area-inset-right, 0px))
+             calc(14px + env(safe-area-inset-bottom, 0px))
+             calc(12px + env(safe-area-inset-left, 0px)) !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Compact header typography for phone viewports (360x780 & 412x915) */
+  .neo-menu-title {
+    font-size: 26px !important;
+    letter-spacing: 3px !important;
+  }
+
+  .neo-menu-subtitle {
+    font-size: 11px !important;
+    letter-spacing: 2px !important;
+  }
+
+  .neo-menu-btn {
+    font-size: 11px !important;
+    padding: 10px 14px !important;
+  }
+
+  /* Pedestals grid adjustment on small screens */
+  .neo-pedestals-container {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .neo-pedestal-card {
+    padding: 8px !important;
+  }
+
+  .neo-pedestal-avatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .neo-pedestal-disc {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  /* Top HUD compact positioning so touch controls never overlap */
+  .neo-hud-top {
+    padding: calc(6px + env(safe-area-inset-top, 0px)) 10px 0 10px !important;
+    transform: scale(0.92);
+    transform-origin: top center;
+  }
+
+  .neo-hud-card {
+    padding: 4px 8px !important;
+  }
+
+  .neo-hud-timer-card {
+    padding: 4px 10px !important;
+  }
+
+  .neo-hud-timer {
+    font-size: 18px !important;
+  }
 }

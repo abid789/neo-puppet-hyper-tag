@@ -68,10 +68,11 @@ export interface InputState {
   jump:      boolean;
   dash:      boolean;
   attack:    boolean;
+  fastFall?: boolean;
 }
 
 export function createInputState(): InputState {
-  return { moveLeft: false, moveRight: false, jump: false, dash: false, attack: false };
+  return { moveLeft: false, moveRight: false, jump: false, dash: false, attack: false, fastFall: false };
 }
 
 // ── Engine ─────────────────────────────────────────────────────────────────────

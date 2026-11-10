@@ -84,6 +84,7 @@ export class Puppet implements ITrackedEntity {
   // ── Phase 3: Match State, AI, and Fair-Play Fields ─────────────────────────
   private _isBot = false;
   private _botInput: InputState = createInputState();
+  private _touchInput: InputState = createInputState();
   private _stunTimer = 0;
   private _inputFrozen = false;
   private _tagGraceShieldTimer = 0;
@@ -236,19 +237,21 @@ export class Puppet implements ITrackedEntity {
   }
 
   public fixedUpdate(dt: number): void {
-    // 1. Gather input state (human or bot)
+    // 1. Gather input state (human or bot or touch)
     if (this._isBot) {
       this._input.moveLeft = this._botInput.moveLeft;
       this._input.moveRight = this._botInput.moveRight;
       this._input.jump = this._botInput.jump;
       this._input.dash = this._botInput.dash;
       this._input.attack = this._botInput.attack;
+      this._input.fastFall = this._botInput.fastFall;
     } else {
-      this._input.moveLeft = this._keysDown.has(this._keyMap.moveLeft);
-      this._input.moveRight = this._keysDown.has(this._keyMap.moveRight);
-      this._input.jump = this._keysDown.has(this._keyMap.jump);
-      this._input.dash = this._keysDown.has(this._keyMap.dash);
-      this._input.attack = this._keysDown.has(this._keyMap.attack);
+      this._input.moveLeft = this._keysDown.has(this._keyMap.moveLeft) || this._touchInput.moveLeft;
+      this._input.moveRight = this._keysDown.has(this._keyMap.moveRight) || this._touchInput.moveRight;
+      this._input.jump = this._keysDown.has(this._keyMap.jump) || this._touchInput.jump;
+      this._input.dash = this._keysDown.has(this._keyMap.dash) || this._touchInput.dash;
+      this._input.attack = this._keysDown.has(this._keyMap.attack) || this._touchInput.attack;
+      this._input.fastFall = this._keysDown.has('KeyS') || this._keysDown.has('ArrowDown') || Boolean(this._touchInput.fastFall);
     }
 
     // Freeze inputs during stun or match intro countdown or elimination
@@ -258,6 +261,7 @@ export class Puppet implements ITrackedEntity {
       this._input.jump = false;
       this._input.dash = false;
       this._input.attack = false;
+      this._input.fastFall = false;
     } else if (this._invertControlsTimer > 0) {
       this._invertControlsTimer = Math.max(0, this._invertControlsTimer - dt);
       const temp = this._input.moveLeft;
@@ -365,6 +369,17 @@ export class Puppet implements ITrackedEntity {
       this._jumpCooldown = 0.28;
       this._state = 'jumping';
       this._emitJumpDust();
+    } else if (!this._grounded && this._input.jump && linvel.y < 0) {
+      // Variable jump height: holding jump sustains upward lift
+      torso.applyImpulse({ x: 0, y: -5.0 * dt }, true);
+    }
+
+    // 5b. Fast-fall (downward impulse while airborne)
+    if (!this._grounded && this._input.fastFall) {
+      torso.applyImpulse({ x: 0, y: 16.0 * dt }, true);
+      if (!this._dashActive && this._backflipTimer <= 0) {
+        this._state = 'falling';
+      }
     }
 
     // 6. Dash
@@ -596,6 +611,20 @@ export class Puppet implements ITrackedEntity {
   // ── Phase 3 Fair-Play & Game Mode Methods ──────────────────────────────────
   public getCurrentInput(): InputState {
     return { ...this._input };
+  }
+
+  public setTouchInput(input: Partial<InputState>): void {
+    this._touchInput = { ...this._touchInput, ...input };
+  }
+
+  public getDashCooldownFraction(): number {
+    const max = 0.9 * this._dashCooldownMultiplier;
+    if (this._dashCooldown <= 0) return 1.0;
+    return Math.max(0, Math.min(1.0, 1.0 - (this._dashCooldown / max)));
+  }
+
+  public isDashReady(): boolean {
+    return this._dashCooldown <= 0 && !this._dashActive && this._stunTimer <= 0;
   }
 
   public setBotInput(input: InputState): void {

@@ -12,10 +12,16 @@ import { SessionHistoryScreen } from './SessionHistoryScreen';
 import { SoundEngine } from '../audio/SoundEngine';
 import { RoomLinkManager } from '../network/RoomLinkManager';
 
+import { SettingsManager } from '../core/SettingsManager';
+import type { TouchControls } from './TouchControls';
+import type { OrientationNotice } from './OrientationNotice';
+
 export type ScreenState = 'MENU' | 'LOBBY' | 'MATCH' | 'PODIUM';
 
 export class UIManager {
   private _state: ScreenState = 'MENU';
+  private _touchControls: TouchControls | null = null;
+  private _orientationNotice: OrientationNotice | null = null;
 
   public readonly menu:       MainMenu;
   public readonly lobby:      LobbyScreen;
@@ -191,11 +197,21 @@ export class UIManager {
 
   // ── Navigation Transitions ───────────────────────────────────────────────────
 
+  public setTouchControls(controls: TouchControls): void {
+    this._touchControls = controls;
+  }
+
+  public setOrientationNotice(notice: OrientationNotice): void {
+    this._orientationNotice = notice;
+  }
+
   public goToMenu(): void {
     this._state = 'MENU';
     this.lobby.hide();
     this.podium.hide();
     this.hud.setVisible(false);
+    this._touchControls?.setVisible(false);
+    this._orientationNotice?.setInMatch(false);
     this.menu.show();
     SoundEngine.getInstance().stopMusic();
   }
@@ -205,6 +221,8 @@ export class UIManager {
     this.menu.hide();
     this.podium.hide();
     this.hud.setVisible(false);
+    this._touchControls?.setVisible(false);
+    this._orientationNotice?.setInMatch(false);
     this.lobby.show(isHost, roomCode, passcode, isRematch);
     SoundEngine.getInstance().startMusic();
   }
@@ -215,6 +233,14 @@ export class UIManager {
     this.lobby.hide();
     this.podium.hide();
     this.hud.setVisible(true);
+
+    if (SettingsManager.getInstance().shouldShowTouchControls()) {
+      this._touchControls?.setVisible(true);
+    } else {
+      this._touchControls?.setVisible(false);
+    }
+    this._orientationNotice?.setInMatch(true);
+
     SoundEngine.getInstance().startMusic();
   }
 
@@ -223,6 +249,8 @@ export class UIManager {
     this.menu.hide();
     this.lobby.hide();
     this.hud.setVisible(false);
+    this._touchControls?.setVisible(false);
+    this._orientationNotice?.setInMatch(false);
     this.podium.show(results);
   }
 }

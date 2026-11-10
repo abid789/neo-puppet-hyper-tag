@@ -4,6 +4,9 @@
 
 import { DEFAULT_KEYBINDS, type KeybindConfig } from '../config/keybinds';
 import { Localization, type SupportedLanguage } from './Localization';
+import { isTouchDevice } from './DeviceInfo';
+
+export type TouchControlSetting = 'Auto' | 'On' | 'Off';
 
 export type GraphicsPreset =
   | 'Max Quality'
@@ -27,6 +30,7 @@ export interface GameSettings {
   masterVolume:        number; // 0.0 to 1.0
   sfxVolume:           number; // 0.0 to 1.0
   musicVolume:         number; // 0.0 to 1.0
+  touchControls:       TouchControlSetting;
   keybinds:            KeybindConfig;
   language:            SupportedLanguage;
 }
@@ -109,14 +113,7 @@ export const PRESET_DEFINITIONS: Record<string, PresetValues> = {
 
 const STORAGE_KEY = 'neo-puppet-settings';
 
-export function isTouchDevice(): boolean {
-  if (typeof window === 'undefined') return false;
-  return (
-    'ontouchstart' in window ||
-    navigator.maxTouchPoints > 0 ||
-    ((navigator as unknown as { msMaxTouchPoints?: number }).msMaxTouchPoints ?? 0) > 0
-  );
-}
+export { isTouchDevice };
 
 const DEFAULT_SETTINGS: GameSettings = {
   graphicsPreset:      'Max Quality',
@@ -130,6 +127,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   masterVolume:        0.8,
   sfxVolume:           0.85,
   musicVolume:         0.7,
+  touchControls:       'Auto',
   keybinds:            { ...DEFAULT_KEYBINDS },
   language:            'en',
 };
@@ -169,6 +167,7 @@ export class SettingsManager {
           masterVolume:        parsed.masterVolume ?? DEFAULT_SETTINGS.masterVolume,
           sfxVolume:           parsed.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume,
           musicVolume:         parsed.musicVolume ?? DEFAULT_SETTINGS.musicVolume,
+          touchControls:       parsed.touchControls ?? DEFAULT_SETTINGS.touchControls,
           keybinds:            { ...DEFAULT_KEYBINDS, ...(parsed.keybinds ?? {}) },
           language:            parsed.language ?? Localization.getLanguage(),
         };
@@ -189,6 +188,12 @@ export class SettingsManager {
     }
 
     return { ...DEFAULT_SETTINGS, keybinds: { ...DEFAULT_KEYBINDS } };
+  }
+
+  public shouldShowTouchControls(): boolean {
+    if (this._settings.touchControls === 'On') return true;
+    if (this._settings.touchControls === 'Off') return false;
+    return isTouchDevice();
   }
 
   public getSettings(): GameSettings {

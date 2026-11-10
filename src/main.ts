@@ -36,6 +36,9 @@ import { UIManager } from './ui/UIManager';
 import { SoundEngine } from './audio/SoundEngine';
 import { SettingsManager } from './core/SettingsManager';
 import { Toast } from './ui/Toast';
+import { TouchControls } from './ui/TouchControls';
+import { OrientationNotice } from './ui/OrientationNotice';
+import { InputManager } from './core/InputManager';
 
 import {
   NEON_CYAN,
@@ -208,6 +211,15 @@ async function main(): Promise<void> {
   emoteWheel.setPuppets(activePuppets);
   const lobbyUI = new LobbyUI(net);
   const uiManager = new UIManager();
+
+  // Mobile Touch Controls & Orientation Notification
+  const touchControls = new TouchControls();
+  touchControls.mount(document.body);
+  const orientationNotice = new OrientationNotice();
+  orientationNotice.mount(document.body);
+  uiManager.setTouchControls(touchControls);
+  uiManager.setOrientationNotice(orientationNotice);
+
   const mapBalanceHud = new MapBalanceHud();
   void mapBalanceHud;
 
@@ -418,6 +430,9 @@ async function main(): Promise<void> {
           }
         }
 
+        // Forward mobile touch input to local player puppet
+        puppet1.setTouchInput(InputManager.getInstance().getTouchInput());
+
         // Fixed update for all active puppets
         for (let i = 0; i < activePuppets.length; i++) {
           activePuppets[i].fixedUpdate(dt);
@@ -477,8 +492,12 @@ async function main(): Promise<void> {
         powerUpManager.render();
         matchController.render(app.screen.width, app.screen.height);
 
-        // Update Esports Match HUD
+        // Update Esports Match HUD & Touch Controls cooldowns
         if (uiManager.currentState === 'MATCH') {
+          if (touchControls.isVisible) {
+            touchControls.updateDashCooldown(puppet1.getDashCooldownFraction(), puppet1.isDashReady());
+          }
+
           const playerLabels = activePuppets.map((p) => {
             const idx = p.getPlayerIndex();
             if (idx === 0) {
@@ -519,6 +538,9 @@ async function main(): Promise<void> {
     particles.setBudget(s.particleBudget);
     engine.setTargetFps(s.targetFps);
     camera.setShakeMultiplier(s.screenShake);
+    if (uiManager.currentState === 'MATCH') {
+      touchControls.setVisible(settings.shouldShowTouchControls());
+    }
   });
 
   // ── Auto Reconnect & Reliability Handlers ────────────────────────────────────
