@@ -312,6 +312,8 @@ export class MapBuilder {
           cp.state = 'dropped';
           cp.timer = cp.def.respawnDurationSec;
           if (cp.body) {
+            const bIdx = this._createdBodies.indexOf(cp.body);
+            if (bIdx !== -1) this._createdBodies.splice(bIdx, 1);
             this._physWorld.removeRigidBody(cp.body);
             cp.body = null;
           }
@@ -540,6 +542,8 @@ export class MapBuilder {
           if (puppet.isDashing()) {
             gb.shattered = true;
             if (gb.body) {
+              const bIdx = this._createdBodies.indexOf(gb.body);
+              if (bIdx !== -1) this._createdBodies.splice(bIdx, 1);
               this._physWorld.removeRigidBody(gb.body);
               gb.body = null;
             }

@@ -170,6 +170,11 @@ export class PresenceService {
     }
   }
 
+  public republishPresence(): void {
+    console.log('[PresenceService] Re-publishing presence after reconnect');
+    this.updateStatus(this._status, this._currentRoomId, this._pingMs);
+  }
+
   public getOnlinePlayers(): PlayerPresence[] {
     return Array.from(this._onlinePlayers.values());
   }

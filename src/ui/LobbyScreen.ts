@@ -187,6 +187,40 @@ export class LobbyScreen {
     }
   }
 
+  public showHostDisconnected(onReturnToMenu: () => void): void {
+    if (!this._container) return;
+
+    let hostDropModal = this._container.querySelector('#neo-host-dropped-modal') as HTMLElement | null;
+    if (!hostDropModal) {
+      hostDropModal = document.createElement('div');
+      hostDropModal.id = 'neo-host-dropped-modal';
+      hostDropModal.style.cssText = `
+        position: absolute; inset: 0; background: rgba(5,5,15,0.92); backdrop-filter: blur(8px);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 1000; text-align: center; padding: 24px;
+      `;
+      hostDropModal.innerHTML = `
+        <div style="font-size:36px; color:#ff0055; margin-bottom:12px;">⚠</div>
+        <h2 style="font-size:18px; color:#ff0055; letter-spacing:2px; margin:0 0 10px 0;">${Localization.t('hostDisconnectedTitle') || 'HOST DISCONNECTED'}</h2>
+        <p style="font-family:'Rajdhani', sans-serif; font-size:14px; color:#bbb; max-width:380px; margin-bottom:24px;">
+          ${Localization.t('hostDisconnectedDesc') || 'The host has disconnected. Host migration is disabled for casual rooms. Please return to the menu.'}
+        </p>
+        <button id="neo-host-drop-return-btn" class="neo-btn-primary" style="padding:10px 24px;">
+          🏠 ${Localization.t('backToMenu') || 'RETURN TO MENU'}
+        </button>
+      `;
+      this._container.appendChild(hostDropModal);
+
+      const retBtn = hostDropModal.querySelector('#neo-host-drop-return-btn') as HTMLButtonElement;
+      if (retBtn) {
+        retBtn.onclick = () => {
+          this.hide();
+          onReturnToMenu();
+        };
+      }
+    }
+  }
+
   public hide(): void {
     if (this._rematchTimerId !== null) {
       clearInterval(this._rematchTimerId);

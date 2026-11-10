@@ -47,6 +47,10 @@ export class UIManager {
     return this._state;
   }
 
+  public get lobbyScreen(): LobbyScreen {
+    return this.lobby;
+  }
+
   public setCallbacks(callbacks: {
     onStartGame:  (cfg: MatchCustomizerConfig) => void;
     onLeaveParty: () => void;

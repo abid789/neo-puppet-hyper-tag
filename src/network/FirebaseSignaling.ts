@@ -83,8 +83,12 @@ export class FirebaseSignaling {
       timestamp: Date.now(),
     });
 
+    const actRef = ref(db, `rooms/${roomCode}/lastActivity`);
+    set(actRef, Date.now()).catch(() => { /* noop */ });
+
     // Auto-clean on disconnect
     onDisconnect(offerRef).remove().catch(() => { /* noop */ });
+    onDisconnect(actRef).remove().catch(() => { /* noop */ });
   }
 
   /**

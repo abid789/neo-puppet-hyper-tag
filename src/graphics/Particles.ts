@@ -99,6 +99,7 @@ export class ParticleSystem {
   private readonly _activeParticles: PooledParticle[] = [];
   private readonly _trailGraphics: Graphics;
   private readonly _trails: Map<number, TrailRingBuffer> = new Map();
+  private _maxBudget = MAX_PARTICLES;
 
   constructor(trailLayer: Container, vfxLayer: Container) {
     // Pre-allocate full pool up front
@@ -112,9 +113,21 @@ export class ParticleSystem {
     trailLayer.addChild(this._trailGraphics);
   }
 
+  public setBudget(budget: number): void {
+    this._maxBudget = Math.max(100, Math.min(budget, MAX_PARTICLES));
+  }
+
+  public get activeParticleCount(): number {
+    return this._activeParticles.length;
+  }
+
+  public get activeCount(): number {
+    return this._activeParticles.length;
+  }
+
   public emit(cfg: ParticleEmitConfig): void {
-    if (this._freeIndices.length === 0) {
-      return; // Pool fully saturated, drop excess gracefully
+    if (this._activeParticles.length >= this._maxBudget || this._freeIndices.length === 0) {
+      return; // Pool or preset budget fully saturated, drop excess gracefully
     }
 
     const freeIdx = this._freeIndices.pop()!;

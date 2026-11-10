@@ -44,6 +44,10 @@ export class NetworkManager {
   private _snapshotListeners: ((snapshot: WorldSnapshot) => void)[] = [];
   private _inputListeners: ((input: ClientInputPacket) => void)[] = [];
   private _eventListeners: ((eventType: string, payload: Record<string, unknown>) => void)[] = [];
+  private _reconnectAttemptListeners: ((attempt: number, max: number) => void)[] = [];
+  private _reconnectedListeners: (() => void)[] = [];
+  private _connectionLostListeners: (() => void)[] = [];
+  private _hostDisconnectedListeners: (() => void)[] = [];
 
   constructor() {
     this._localPlayerId = this._getOrCreatePlayerId();
@@ -182,6 +186,30 @@ export class NetworkManager {
             this._dispatchIncomingBinary(data);
           }
         },
+        onReconnectAttempt: (attempt, maxAttempts) => {
+          for (let i = 0; i < this._reconnectAttemptListeners.length; i++) {
+            this._reconnectAttemptListeners[i](attempt, maxAttempts);
+          }
+        },
+        onReconnected: () => {
+          for (let i = 0; i < this._reconnectedListeners.length; i++) {
+            this._reconnectedListeners[i]();
+          }
+        },
+        onReconnectFailed: () => {
+          for (let i = 0; i < this._connectionLostListeners.length; i++) {
+            this._connectionLostListeners[i]();
+          }
+        },
+        onConnectionChange: (state) => {
+          if (state === 'closed' || state === 'failed') {
+            if (!this._isHost) {
+              for (let i = 0; i < this._hostDisconnectedListeners.length; i++) {
+                this._hostDisconnectedListeners[i]();
+              }
+            }
+          }
+        },
       });
 
       this._peerConnections.set('host', clientPeer);
@@ -204,6 +232,11 @@ export class NetworkManager {
       this._isHost = this._localFallback.isHost;
       this._localPlayerIndex = this._localFallback.playerIndex;
       this._localFallback.onMessage((bytes) => this._dispatchIncomingBinary(bytes));
+      this._localFallback.onHostDisconnected(() => {
+        for (let i = 0; i < this._hostDisconnectedListeners.length; i++) {
+          this._hostDisconnectedListeners[i]();
+        }
+      });
       return joined;
     }
   }
@@ -290,5 +323,28 @@ export class NetworkManager {
 
   public onEvent(cb: (eventType: string, payload: Record<string, unknown>) => void): void {
     this._eventListeners.push(cb);
+  }
+
+  public onReconnectAttempt(cb: (attempt: number, max: number) => void): void {
+    this._reconnectAttemptListeners.push(cb);
+  }
+
+  public onReconnected(cb: () => void): void {
+    this._reconnectedListeners.push(cb);
+  }
+
+  public onConnectionLost(cb: () => void): void {
+    this._connectionLostListeners.push(cb);
+  }
+
+  public onHostDisconnected(cb: () => void): void {
+    this._hostDisconnectedListeners.push(cb);
+  }
+
+  public async manualRejoin(): Promise<boolean> {
+    if (!this._roomCode) return false;
+    const code = this._roomCode;
+    console.log(`[NetworkManager] Manually rejoining room: ${code}`);
+    return this.joinRoom(code);
   }
 }

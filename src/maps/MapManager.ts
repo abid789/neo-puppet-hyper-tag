@@ -212,6 +212,18 @@ export class MapManager {
     return this._maps[this._currentIndex];
   }
 
+  public get activeBodyCount(): number {
+    return this._physWorld.getBodyCount();
+  }
+
+  public get activeColliderCount(): number {
+    return this._physWorld.getColliderCount();
+  }
+
+  public get mapCount(): number {
+    return this._maps.length;
+  }
+
   // ── Zero-Leak Verification Diagnostics ───────────────────────────────────────
   public getDebugMetrics(): MapDebugMetrics {
     const curBodies = this._physWorld.getBodyCount();

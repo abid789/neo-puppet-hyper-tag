@@ -1,5 +1,6 @@
 // src/network/WebRTCPeer.ts
 // WebRTC peer connection manager with unreliable/unordered RTCDataChannel for 60Hz physics.
+// Includes 10-attempt exponential backoff auto-reconnect (1s, 2s, 4s, 8s, 8s...).
 // Utilizes Google's public STUN server stun:stun.l.google.com:19302.
 
 export interface WebRTCPeerConfig {
@@ -8,6 +9,9 @@ export interface WebRTCPeerConfig {
   onIceCandidate?: (candidate: RTCIceCandidateInit) => void;
   onMessage?: (data: Uint8Array | string) => void;
   onConnectionChange?: (state: RTCPeerConnectionState) => void;
+  onReconnectAttempt?: (attempt: number, maxAttempts: number) => void;
+  onReconnected?: () => void;
+  onReconnectFailed?: () => void;
 }
 
 export class WebRTCPeer {
@@ -16,7 +20,8 @@ export class WebRTCPeer {
   private _dataChannel: RTCDataChannel | null = null;
   private _isClosing = false;
   private _reconnectAttempts = 0;
-  private static readonly MAX_RECONNECT_ATTEMPTS = 3;
+  private _reconnectTimeoutId: number | null = null;
+  public static readonly MAX_RECONNECT_ATTEMPTS = 10;
 
   constructor(cfg: WebRTCPeerConfig) {
     this._cfg = cfg;
@@ -76,7 +81,11 @@ export class WebRTCPeer {
 
     channel.onopen = () => {
       console.log(`[WebRTCPeer] RTCDataChannel OPEN (${this._cfg.peerId})`);
+      const wasReconnecting = this._reconnectAttempts > 0;
       this._reconnectAttempts = 0;
+      if (wasReconnecting && this._cfg.onReconnected) {
+        this._cfg.onReconnected();
+      }
     };
 
     channel.onclose = () => {
@@ -151,23 +160,57 @@ export class WebRTCPeer {
     return this._dataChannel !== null && this._dataChannel.readyState === 'open';
   }
 
+  public manualReconnect(): void {
+    if (this._reconnectTimeoutId !== null) {
+      clearTimeout(this._reconnectTimeoutId);
+      this._reconnectTimeoutId = null;
+    }
+    this._reconnectAttempts = 0;
+    this._initPeerConnection();
+  }
+
   private _attemptReconnect(): void {
     if (this._isClosing) return;
+
     if (this._reconnectAttempts >= WebRTCPeer.MAX_RECONNECT_ATTEMPTS) {
-      console.warn(`[WebRTCPeer] Max reconnect attempts reached for ${this._cfg.peerId}`);
+      console.warn(`[WebRTCPeer] Max reconnect attempts (${WebRTCPeer.MAX_RECONNECT_ATTEMPTS}) reached for ${this._cfg.peerId}`);
+      if (this._cfg.onReconnectFailed) {
+        this._cfg.onReconnectFailed();
+      }
       return;
     }
-    this._reconnectAttempts++;
-    console.log(`[WebRTCPeer] Attempting reconnect #${this._reconnectAttempts}…`);
 
-    setTimeout(() => {
+    this._reconnectAttempts++;
+
+    // Exponential backoff: 1 s, 2 s, 4 s, 8 s, then every 8 s, up to 10 attempts
+    const backoffMs = Math.min(8000, 1000 * Math.pow(2, this._reconnectAttempts - 1));
+
+    console.log(
+      `[WebRTCPeer] Attempting auto-reconnect #${this._reconnectAttempts}/${WebRTCPeer.MAX_RECONNECT_ATTEMPTS} ` +
+      `in ${backoffMs}ms for peer ${this._cfg.peerId}…`,
+    );
+
+    if (this._cfg.onReconnectAttempt) {
+      this._cfg.onReconnectAttempt(this._reconnectAttempts, WebRTCPeer.MAX_RECONNECT_ATTEMPTS);
+    }
+
+    if (this._reconnectTimeoutId !== null) {
+      clearTimeout(this._reconnectTimeoutId);
+    }
+
+    this._reconnectTimeoutId = window.setTimeout(() => {
       if (!this._isClosing) {
         this._initPeerConnection();
       }
-    }, 1200 * this._reconnectAttempts);
+    }, backoffMs);
   }
 
   private _teardown(): void {
+    if (this._reconnectTimeoutId !== null) {
+      clearTimeout(this._reconnectTimeoutId);
+      this._reconnectTimeoutId = null;
+    }
+
     if (this._dataChannel) {
       this._dataChannel.onopen = null;
       this._dataChannel.onclose = null;

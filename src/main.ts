@@ -14,6 +14,10 @@ import { MatchController } from './game/MatchController';
 import { PuppetBotController, type BotDifficulty, type BotPersonality } from './ai/PuppetBotController';
 import { Engine } from './core/Engine';
 import { MapBalanceHud } from './ui/MapBalanceHud';
+import { DebugCounter } from './core/DebugCounter';
+import { SoakTest } from './game/SoakTest';
+import { ReconnectBanner } from './ui/ReconnectBanner';
+import { FirebaseCleanup } from './network/FirebaseCleanup';
 
 // Phase 4 Networking & Social modules
 import { NetworkManager } from './network/NetworkManager';
@@ -45,6 +49,9 @@ import {
 import type { ITrackedEntity } from './types';
 
 async function main(): Promise<void> {
+  // ── Global Listener Counter ──────────────────────────────────────────────────
+  DebugCounter.init();
+
   // ── Network, Settings & Profile Initialization ──────────────────────────────
   const net = NetworkManager.getInstance();
   const settings = SettingsManager.getInstance();
@@ -54,6 +61,9 @@ async function main(): Promise<void> {
   // Ensure pilot profile (prompts modal if first time opening URL)
   const userProfile = await RoomLinkManager.ensureUserProfile(net.playerId);
   ChatService.getInstance().setLocalSender(userProfile.nickname, userProfile.avatarSkin);
+
+  // 6-hour bounded Firebase cleanup routine
+  FirebaseCleanup.runIfDue(userProfile.playerId).catch(() => { /* noop */ });
 
   // ── Loading overlay ──────────────────────────────────────────────────────────
   const overlay = document.createElement('div');
@@ -76,22 +86,20 @@ async function main(): Promise<void> {
   await renderer.init();
   renderer.setCustomMapActive(true);
 
-  // Apply initial graphics preset
-  renderer.setGraphicsPreset(settings.getSettings().graphicsPreset);
+  // Apply initial graphics preset and resolution scale
+  const initSettings = settings.getSettings();
+  renderer.setGraphicsPreset(initSettings.graphicsPreset);
+  renderer.setResolutionScale(initSettings.renderScale);
 
   // ── Build game container (camera transforms this, not the full stage) ────────
   const { layers, app } = renderer;
 
   // ── Systems ───────────────────────────────────────────────────────────────────
   const camera = new Camera();
-  camera.setShakeMultiplier(settings.getSettings().screenShake);
-
-  settings.onSettingsChanged((s) => {
-    renderer.setGraphicsPreset(s.graphicsPreset);
-    camera.setShakeMultiplier(s.screenShake);
-  });
+  camera.setShakeMultiplier(initSettings.screenShake);
 
   const particles = new ParticleSystem(layers.trailLayer, layers.vfxLayer);
+  particles.setBudget(initSettings.particleBudget);
   const lighting = new LightingSystem(layers.lightingLayer, app);
   const powerUpManager = new PowerUpManager(physWorld, particles, layers.entityLayer);
   const mapManager = new MapManager(
@@ -497,6 +505,66 @@ async function main(): Promise<void> {
     },
     layers.uiOverlayLayer,
   );
+
+  engine.setTargetFps(initSettings.targetFps);
+  engine.setDiagnosticsGetter(() => ({
+    particles: particles.activeParticleCount,
+    bodies: physWorld.getBodyCount(),
+    listeners: DebugCounter.getEventListenerCount(),
+  }));
+
+  settings.onSettingsChanged((s) => {
+    renderer.setGraphicsPreset(s.graphicsPreset);
+    renderer.setResolutionScale(s.renderScale);
+    particles.setBudget(s.particleBudget);
+    engine.setTargetFps(s.targetFps);
+    camera.setShakeMultiplier(s.screenShake);
+  });
+
+  // ── Auto Reconnect & Reliability Handlers ────────────────────────────────────
+  const reconnectBanner = ReconnectBanner.getInstance();
+
+  net.onReconnectAttempt((attempt, max) => {
+    reconnectBanner.showReconnecting(attempt, max);
+  });
+
+  net.onReconnected(() => {
+    reconnectBanner.hideAll();
+    presence.republishPresence();
+    Toast.show('✓ Reconnected to squad room');
+  });
+
+  net.onConnectionLost(() => {
+    reconnectBanner.showConnectionLost(
+      async () => {
+        const ok = await net.manualRejoin();
+        if (!ok) {
+          Toast.show('Failed to rejoin room');
+        }
+      },
+      () => {
+        net.leaveRoom();
+        RoomLinkManager.clearRoomFromUrl();
+        reconnectBanner.hideAll();
+        uiManager.goToMenu();
+      },
+    );
+  });
+
+  net.onHostDisconnected(() => {
+    if (uiManager.currentState === 'LOBBY') {
+      uiManager.lobbyScreen.showHostDisconnected(() => {
+        net.leaveRoom();
+        RoomLinkManager.clearRoomFromUrl();
+        uiManager.goToMenu();
+      });
+    } else {
+      Toast.show('Host disconnected from room');
+    }
+  });
+
+  // ── 10-Minute Soak Test Runner (?soak=1) ─────────────────────────────────────
+  SoakTest.startIfRequested(mapManager, particles, physWorld);
 
   // ── Hide loading overlay ───────────────────────────────────────────────────────
   overlay.classList.add('hidden');

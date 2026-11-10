@@ -94,6 +94,15 @@ export interface TranslationDictionary {
   todayMatches:      string;
   rivalryMatrix:     string;
 
+  // Reconnection & Reliability
+  reconnectingTitle:      string;
+  reconnectAttempt:       string;
+  connectionLostTitle:    string;
+  connectionLostDesc:     string;
+  rejoinBtn:              string;
+  hostDisconnectedTitle:  string;
+  hostDisconnectedDesc:   string;
+
   // HUD
   timeRemaining:     string;
   score:             string;
@@ -226,6 +235,14 @@ const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     todayMatches:      "TODAY'S MATCHES",
     rivalryMatrix:     'RIVALRY MATRIX // PAIR SUMMARY',
 
+    reconnectingTitle:     'RECONNECTING…',
+    reconnectAttempt:      'Attempt',
+    connectionLostTitle:   'CONNECTION LOST',
+    connectionLostDesc:    'Unable to reconnect to the session after 10 attempts. Would you like to rejoin or return to the menu?',
+    rejoinBtn:             'REJOIN ROOM',
+    hostDisconnectedTitle: 'HOST DISCONNECTED',
+    hostDisconnectedDesc:  'The room host has disconnected. Host migration is disabled for casual rooms. Please return to the menu.',
+
     timeRemaining:     'TIME REMAINING',
     score:             'PTS',
     dashReady:         'DASH READY',
@@ -350,6 +367,14 @@ const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     setNicknameTitle:  'বন্ধুর নাম নির্ধারণ (শুধুমাত্র এই ডিভাইসে)',
     todayMatches:      'আজকের ম্যাচসমূহ',
     rivalryMatrix:     'দ্বৈত প্রতিদ্বন্দ্বিতা রেকর্ড',
+
+    reconnectingTitle:     'পুনঃসংযোগ করা হচ্ছে…',
+    reconnectAttempt:      'প্রচেষ্টা',
+    connectionLostTitle:   'সংযোগ বিচ্ছিন্ন হয়েছে',
+    connectionLostDesc:    '১০ বার চেষ্টা করার পরও সংযোগ স্থাপন সম্ভব হয়নি। আপনি কি পুনরায় যোগ দিতে চান নাকি মেনুতে ফিরবেন?',
+    rejoinBtn:             'রুমে পুনরায় যোগ দিন',
+    hostDisconnectedTitle: 'হোস্ট বিচ্ছিন্ন হয়েছেন',
+    hostDisconnectedDesc:  'রুমের হোস্ট সংযোগ বিচ্ছিন্ন হয়েছেন। অনুগ্রহ করে মূল মেনুতে ফিরে যান।',
 
     timeRemaining:     'অবশিষ্ট সময়',
     score:             'পয়েন্ট',

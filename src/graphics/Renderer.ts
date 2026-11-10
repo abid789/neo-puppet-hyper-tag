@@ -6,6 +6,7 @@ import type { Filter } from 'pixi.js';
 import { DARK_BG, PANEL_BG, NEON_CYAN, PPM } from '../types';
 import type { RendererLayers } from '../types';
 import { createVignetteScanlineFilter } from './Shaders';
+import type { GraphicsPreset } from '../core/SettingsManager';
 
 export class Renderer {
   public app!: Application;
@@ -149,15 +150,45 @@ export class Renderer {
     }
   }
 
-  public setGraphicsPreset(preset: 'Ultra' | 'High' | 'Esports'): void {
+  public setGraphicsPreset(preset: GraphicsPreset): void {
     if (preset === 'Esports') {
       this.app.stage.filters = [];
       this.layers.lightingLayer.visible = false;
-    } else {
-      const { filter: vigFilter } = createVignetteScanlineFilter(preset === 'Ultra');
+      this.setResolutionScale(1.0);
+    } else if (preset === 'Low Spec') {
+      this.app.stage.filters = [];
+      this.layers.lightingLayer.visible = false;
+      this.setResolutionScale(0.75);
+    } else if (preset === 'Mobile') {
+      this.app.stage.filters = [];
+      this.layers.lightingLayer.visible = false;
+      this.setResolutionScale(0.75);
+    } else if (preset === 'Balanced' || preset === 'High') {
+      const { filter: vigFilter } = createVignetteScanlineFilter(false);
       this._syncVignetteRes(vigFilter);
       this.app.stage.filters = [vigFilter];
       this.layers.lightingLayer.visible = true;
+      this.setResolutionScale(1.0);
+    } else {
+      // 'Max Quality', 'Ultra', or 'Custom'
+      const { filter: vigFilter } = createVignetteScanlineFilter(true);
+      this._syncVignetteRes(vigFilter);
+      this.app.stage.filters = [vigFilter];
+      this.layers.lightingLayer.visible = true;
+      this.setResolutionScale(1.0);
+    }
+  }
+
+  public setResolutionScale(scale: number): void {
+    try {
+      const baseDpr = window.devicePixelRatio || 1;
+      const targetRes = Math.max(0.5, Math.min(1.0, scale)) * baseDpr;
+      if (this.app && this.app.renderer) {
+        this.app.renderer.resolution = targetRes;
+        this.app.renderer.resize(window.innerWidth, window.innerHeight);
+      }
+    } catch {
+      /* noop */
     }
   }
 

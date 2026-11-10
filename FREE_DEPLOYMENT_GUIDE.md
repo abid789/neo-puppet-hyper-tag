@@ -128,3 +128,59 @@ When friends click the link:
 1. First-time visitors are welcomed with the **Pilot Identification** modal to pick a callsign and neon visor skin.
 2. The game automatically joins room `TAG-8492`.
 3. Players can ready up and battle with 60Hz deterministic physics!
+
+---
+
+## 4. Automated Database Upkeep & Firebase Maintenance
+
+To ensure your Firebase Spark Plan remains completely free without exceeding the 1 GB storage limit or 10 GB monthly bandwidth quota, NEO-PUPPET includes automated and manual database upkeep.
+
+### Automated Client-Side Cleanup Routine
+The game features a built-in maintenance worker (`src/network/FirebaseCleanup.ts`) that executes automatically:
+- **Frequency:** Runs on app launch, strictly throttled to at most once every **6 hours** (tracked in `localStorage.getItem('neo-puppet-last-firebase-cleanup')`).
+- **Bounded Queries:** It never reads or scans entire collections. All queries utilize bounded constraints (`orderByChild`, `endAt`, `limitToFirst(50)`):
+  1. **Presence Pruning:** Removes entries under `/presence` where `lastSeen` is older than **24 hours**.
+  2. **Room Pruning:** Removes rooms under `/rooms` where `lastActivity` is older than **24 hours**.
+  3. **Invite Pruning:** Deletes expired direct party invites under `/invites/{playerId}` older than **60 seconds**.
+- **Atomic Batch Deletion:** Deletions are sent as a single multi-path `update` payload, keeping network requests minimal.
+
+### Manual Cleanup from the Firebase Console
+If you ever wish to inspect stored data or manually purge records:
+1. Navigate to the [Firebase Console](https://console.firebase.google.com/) and select your project.
+2. Click **Build $\rightarrow$ Realtime Database** in the left sidebar, and select the **Data** tab.
+3. You will see three top-level nodes:
+   - `/presence`: Displays online combatants. To purge all offline users, hover over the `presence` node, click the red **`x` (Delete)** icon, and confirm. Active players will automatically re-publish their presence on their next heartbeat.
+   - `/rooms`: Contains WebRTC signaling exchanges and room passcode hashes. To purge all ended game rooms, hover over `rooms`, click the **`x` (Delete)** icon, and confirm.
+   - `/invites`: Temporary party invite requests. To clear all historical invites, hover over `invites`, click **`x` (Delete)**, and confirm.
+4. **Index Verification (Optional for Performance):**
+   Ensure your database rules in the **Rules** tab specify indexes on timestamps to keep bounded queries lightning-fast:
+   ```json
+   {
+     "rules": {
+       "presence": {
+         ".indexOn": ["lastSeen"],
+         "$playerId": {
+           ".read": true,
+           ".write": "$playerId != null"
+         }
+       },
+       "rooms": {
+         ".indexOn": ["lastActivity"],
+         "$roomCode": {
+           ".read": true,
+           ".write": true
+         }
+       },
+       "invites": {
+         "$targetPlayerId": {
+           ".indexOn": ["timestamp"],
+           "$inviteId": {
+             ".read": true,
+             ".write": true
+           }
+         }
+       }
+     }
+   }
+   ```
+

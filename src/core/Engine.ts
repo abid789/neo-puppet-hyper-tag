@@ -3,6 +3,12 @@ import type { EngineHooks } from '../types';
 import { PerfHud } from './PerfHud';
 import type { Container } from 'pixi.js';
 
+export interface DiagnosticsSnapshot {
+  particles: number;
+  bodies: number;
+  listeners: number;
+}
+
 export class Engine {
   private _hooks: EngineHooks;
   private _accumulator = 0;
@@ -22,6 +28,13 @@ export class Engine {
   private _pingMs = 0;
   private _bufferMs = 50;
 
+  // Render FPS cap support (e.g. 30 FPS cap for Mobile / Low Spec)
+  private _targetFps = 60;
+  private _minRenderInterval = 0;
+  private _lastRenderTime = 0;
+
+  private _diagnosticsGetter: (() => DiagnosticsSnapshot) | null = null;
+
   constructor(hooks: EngineHooks, uiLayer: Container) {
     this._hooks = hooks;
     this._hud = new PerfHud(uiLayer);
@@ -37,6 +50,7 @@ export class Engine {
   start(): void {
     this._running = true;
     this._lastTime = performance.now();
+    this._lastRenderTime = performance.now();
     this._rafId = requestAnimationFrame(this._loop);
   }
 
@@ -53,6 +67,24 @@ export class Engine {
     this._bufferMs = bufferMs;
   }
 
+  setTargetFps(fps: number): void {
+    this._targetFps = fps;
+    if (fps > 0 && fps <= 45) {
+      // 30 FPS render cap: throttle onRender to ~33.3ms intervals
+      this._minRenderInterval = (1000 / fps) - 2;
+    } else {
+      this._minRenderInterval = 0;
+    }
+  }
+
+  public get targetFps(): number {
+    return this._targetFps;
+  }
+
+  setDiagnosticsGetter(getter: () => DiagnosticsSnapshot): void {
+    this._diagnosticsGetter = getter;
+  }
+
   hitStop(durationMs: number): void {
     this._hitStopRemaining = durationMs;
     this._hitStopActive = true;
@@ -65,6 +97,10 @@ export class Engine {
 
   getTimeScale(): number {
     return this._timeScale;
+  }
+
+  public get perfHud(): PerfHud {
+    return this._hud;
   }
 
   private _loop = (now: number): void => {
@@ -95,9 +131,9 @@ export class Engine {
     const scaledDelta = rawDelta * this._timeScale;
     const delta = Math.min(scaledDelta, MAX_DELTA);
 
-    const frameStart = performance.now();
     this._accumulator += delta;
 
+    // Physics step always runs at fixed 60Hz rate
     while (this._accumulator >= FIXED_DT) {
       this._physStepStart = performance.now();
       this._hooks.onFixedUpdate(FIXED_DT);
@@ -105,19 +141,35 @@ export class Engine {
       this._accumulator -= FIXED_DT;
     }
 
-    const alpha = this._accumulator / FIXED_DT;
-    this._hooks.onRender(alpha, delta);
+    // Render step respects render FPS cap if configured (e.g. 30 FPS cap on mobile)
+    const shouldRender = this._minRenderInterval === 0 || (now - this._lastRenderTime) >= this._minRenderInterval;
 
-    const frameMs = performance.now() - frameStart;
+    if (shouldRender) {
+      const frameStart = performance.now();
+      this._lastRenderTime = now;
+      const alpha = this._accumulator / FIXED_DT;
+      this._hooks.onRender(alpha, delta);
+      const frameMs = performance.now() - frameStart;
 
-    this._fpsAccum += delta;
-    this._frameCount++;
-    if (this._fpsAccum >= 1) {
-      this._displayFps = Math.round(this._frameCount / this._fpsAccum);
-      this._fpsAccum = 0;
-      this._frameCount = 0;
+      this._fpsAccum += delta;
+      this._frameCount++;
+      if (this._fpsAccum >= 1) {
+        this._displayFps = Math.round(this._frameCount / this._fpsAccum);
+        this._fpsAccum = 0;
+        this._frameCount = 0;
+      }
+
+      const diag = this._diagnosticsGetter ? this._diagnosticsGetter() : { particles: 0, bodies: 0, listeners: 0 };
+      this._hud.update(
+        this._displayFps,
+        frameMs,
+        this._physStepMs,
+        this._pingMs,
+        this._bufferMs,
+        diag.particles,
+        diag.bodies,
+        diag.listeners,
+      );
     }
-
-    this._hud.update(this._displayFps, frameMs, this._physStepMs, this._pingMs, this._bufferMs);
   };
 }

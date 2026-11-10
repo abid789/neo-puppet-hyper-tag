@@ -21,6 +21,7 @@ export class LocalBroadcastFallback {
   private _lastPingSent = 0;
   private _onMessageCb: ((data: Uint8Array) => void) | null = null;
   private _onPeerJoinedCb: ((peerId: string, playerIndex: number) => void) | null = null;
+  private _onHostDisconnectedCb: (() => void) | null = null;
   private _connectedPeers: Map<string, number> = new Map();
   private _pingIntervalId: number | null = null;
 
@@ -152,6 +153,9 @@ export class LocalBroadcastFallback {
 
       case 'LEAVE':
         this._connectedPeers.delete(msg.senderId);
+        if (msg.playerIndex === 0 && !this._isHost && this._onHostDisconnectedCb) {
+          this._onHostDisconnectedCb();
+        }
         break;
     }
   }
@@ -173,6 +177,10 @@ export class LocalBroadcastFallback {
 
   public onPeerJoined(cb: (peerId: string, playerIndex: number) => void): void {
     this._onPeerJoinedCb = cb;
+  }
+
+  public onHostDisconnected(cb: () => void): void {
+    this._onHostDisconnectedCb = cb;
   }
 
   private _startPing(): void {
