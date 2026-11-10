@@ -1,0 +1,117 @@
+/* ══════════════════════════════════════════════════════════════
+   NEO-PUPPET: HYPER TAG — Global Styles
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Neon color palette ───────────────────────────────────────── */
+:root {
+  --neon-cyan:    #00ffff;
+  --neon-pink:    #ff0066;
+  --neon-green:   #00ff88;
+  --neon-purple:  #aa00ff;
+  --neon-orange:  #ff6600;
+  --neon-yellow:  #ffee00;
+  --neon-blue:    #0066ff;
+
+  --bg-dark:      #05050f;
+  --bg-panel:     #0d0d1f;
+  --bg-panel2:    #111128;
+  --text-primary: #e0e0ff;
+  --text-dim:     #6666aa;
+
+  --glow-cyan:    0 0 8px #00ffff, 0 0 20px #00ffff44;
+  --glow-pink:    0 0 8px #ff0066, 0 0 20px #ff006644;
+  --glow-green:   0 0 8px #00ff88, 0 0 20px #00ff8844;
+
+  --font-display: 'Orbitron', monospace;
+  --font-ui:      'Rajdhani', sans-serif;
+  --font-body:    'Inter', sans-serif;
+}
+
+/* ── Reset & base ─────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent text selection during gameplay */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── App mount ────────────────────────────────────────────────── */
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Pixi canvas inherits full viewport */
+#app canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+}
+
+/* ── Utility glow classes (used by any overlaid HTML) ─────────── */
+.glow-cyan  { text-shadow: var(--glow-cyan); }
+.glow-pink  { text-shadow: var(--glow-pink); }
+.glow-green { text-shadow: var(--glow-green); }
+
+/* ── Loading overlay (shown before WASM init) ─────────────────── */
+#loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-dark);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  z-index: 9999;
+  transition: opacity 0.6s ease;
+}
+
+#loading-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#loading-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--neon-cyan);
+  text-shadow: var(--glow-cyan);
+}
+
+#loading-sub {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  letter-spacing: 0.3em;
+  color: var(--text-dim);
+  animation: blink 1.2s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}

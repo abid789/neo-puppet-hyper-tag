@@ -1,0 +1,23 @@
+{
+  "name": "neo-puppet-hyper-tag",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "node scripts/patch-rollup.cjs"
+  },
+  "dependencies": {
+    "@dimforge/rapier2d-compat": "0.21.0",
+    "firebase": "11.10.0",
+    "pixi.js": "8.22.0"
+  },
+  "devDependencies": {
+    "@rollup/wasm-node": "^4.68.2",
+    "typescript": "5.6.3",
+    "vite": "5.4.14"
+  }
+}
