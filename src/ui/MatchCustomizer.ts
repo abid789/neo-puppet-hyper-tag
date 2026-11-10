@@ -2,7 +2,7 @@
 // Host match parameter customizer: Arena cards with visual previews, tag modes, duration, modifiers, and bot slots.
 
 import { Localization } from '../core/Localization';
-import type { BotDifficulty } from '../ai/PuppetBotController';
+import type { BotDifficulty, BotPersonality } from '../ai/PuppetBotController';
 
 export interface MatchCustomizerConfig {
   mapIndex:      number;
@@ -11,6 +11,7 @@ export interface MatchCustomizerConfig {
   modifier:      'normal' | 'turbo' | 'low_g';
   botCount:      number;
   botDifficulty: BotDifficulty;
+  botPersonality: BotPersonality;
 }
 
 export const MAP_PREVIEWS = [
@@ -33,8 +34,13 @@ export class MatchCustomizer {
     modifier:      'normal',
     botCount:      3,
     botDifficulty: 'Pro',
+    botPersonality: 'Aggressive',
   };
   private _onApplyCb: ((cfg: MatchCustomizerConfig) => void) | null = null;
+
+  public get config(): MatchCustomizerConfig {
+    return { ...this._cfg };
+  }
 
   public setOnApply(cb: (cfg: MatchCustomizerConfig) => void): void {
     this._onApplyCb = cb;
@@ -147,6 +153,16 @@ export class MatchCustomizer {
               </div>
             </div>
           </div>
+
+          <!-- 5. Bot Personality -->
+          <div class="neo-customizer-section" style="margin-top: 14px;">
+            <label class="neo-section-label">${Localization.t('personalityLabel')}</label>
+            <div class="neo-btn-group">
+              <button class="neo-pill-btn ${this._cfg.botPersonality === 'Aggressive' ? 'active' : ''}" data-pers="Aggressive">${Localization.t('persAggressive')}</button>
+              <button class="neo-pill-btn ${this._cfg.botPersonality === 'Cautious' ? 'active' : ''}" data-pers="Cautious">${Localization.t('persCautious')}</button>
+              <button class="neo-pill-btn ${this._cfg.botPersonality === 'Random' ? 'active' : ''}" data-pers="Random">${Localization.t('persRandom')}</button>
+            </div>
+          </div>
         </div>
 
         <div class="neo-customizer-footer">
@@ -205,6 +221,14 @@ export class MatchCustomizer {
         modal.querySelectorAll('.neo-pill-btn[data-diff]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this._cfg.botDifficulty = btn.getAttribute('data-diff') as BotDifficulty;
+      });
+    });
+
+    modal.querySelectorAll('.neo-pill-btn[data-pers]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.querySelectorAll('.neo-pill-btn[data-pers]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this._cfg.botPersonality = btn.getAttribute('data-pers') as BotPersonality;
       });
     });
 

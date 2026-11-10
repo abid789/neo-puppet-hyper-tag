@@ -45,12 +45,15 @@ export class NetSync {
   private static readonly MAX_PREDICTION_HISTORY = 120;
   private static readonly RECONCILIATION_THRESHOLD_METRES = 0.08;
 
-  // Remote Puppet Interpolation Buffers (50ms interpolation delay)
+  // Remote Puppet Interpolation Buffers (adaptive 50ms - 100ms interpolation delay based on ping)
   public static readonly INTERPOLATION_DELAY_MS = 50;
   private readonly _remoteBuffers: Map<number, StampedPuppetState[]> = new Map();
+  private _currentInterpolationDelayMs = 50;
 
-  // Ping calculation
+  // Ping calculation & 2-second rolling window
   private _pingMs = 0;
+  private _rollingPingMs = 0;
+  private readonly _pingSamples: Array<{ pingMs: number; timestamp: number }> = [];
   private _onPingUpdatedCb: ((ping: number) => void) | null = null;
 
   constructor(net: NetworkManager = NetworkManager.getInstance()) {
@@ -83,11 +86,19 @@ export class NetSync {
     return this._pingMs;
   }
 
+  public get rollingPing(): number {
+    return this._rollingPingMs > 0 ? this._rollingPingMs : this._pingMs;
+  }
+
+  public get currentInterpolationDelay(): number {
+    return this._currentInterpolationDelayMs;
+  }
+
   /**
    * Called during fixedUpdate (60Hz).
    */
   public fixedUpdate(dt: number): void {
-    void dt;
+    this._updateAdaptiveBuffer(dt);
     this._tick++;
 
     if (this._net.isHost) {
@@ -166,6 +177,7 @@ export class NetSync {
     if (!this._net.isHost) {
       const rtt = Math.max(1, Math.round(now - snap.hostTimestamp));
       this._pingMs = Math.round(this._pingMs * 0.8 + rtt * 0.2);
+      this._recordPingSample(rtt, now);
       if (this._onPingUpdatedCb) {
         this._onPingUpdatedCb(this._pingMs);
       }
@@ -232,11 +244,46 @@ export class NetSync {
     }
   }
 
+  private _recordPingSample(ping: number, now: number): void {
+    this._pingSamples.push({ pingMs: ping, timestamp: now });
+    // Keep window strictly within the last 2000ms
+    const cutoff = now - 2000;
+    while (this._pingSamples.length > 0 && this._pingSamples[0].timestamp < cutoff) {
+      this._pingSamples.shift();
+    }
+    const sum = this._pingSamples.reduce((acc, s) => acc + s.pingMs, 0);
+    this._rollingPingMs = this._pingSamples.length > 0 ? Math.round(sum / this._pingSamples.length) : this._pingMs;
+  }
+
+  private _updateAdaptiveBuffer(dt: number): void {
+    const effectivePing = this._rollingPingMs > 0 ? this._rollingPingMs : this._pingMs;
+    let targetBuffer = 50;
+
+    // Smoothly scale from 50 ms to up to 100 ms when ping > 120 ms; return to 50 ms when ping < 80 ms
+    if (effectivePing > 120) {
+      const excess = Math.min(100, effectivePing - 120);
+      targetBuffer = 50 + (excess / 100) * 50; // Scales 50ms -> 100ms
+    } else if (effectivePing < 80) {
+      targetBuffer = 50;
+    } else {
+      // Between 80 and 120: gradual transitional curve
+      const ratio = (effectivePing - 80) / 40;
+      targetBuffer = 50 + ratio * 8;
+    }
+
+    // Smoothly step buffer towards target value
+    this._currentInterpolationDelayMs = lerp(
+      this._currentInterpolationDelayMs,
+      targetBuffer,
+      Math.min(1.0, dt * 2.5),
+    );
+  }
+
   /**
-   * Applies smooth 50ms snapshot interpolation to all remote puppets.
+   * Applies smooth adaptive (50ms - 100ms) snapshot interpolation to all remote puppets.
    */
   public interpolateRemotePuppets(): void {
-    const renderTime = performance.now() - NetSync.INTERPOLATION_DELAY_MS;
+    const renderTime = performance.now() - this._currentInterpolationDelayMs;
     const localIdx = this._net.isHost ? -1 : this._net.localPlayerIndex;
 
     for (let i = 0; i < this._puppets.length; i++) {

@@ -4,6 +4,7 @@
 
 import type { MapDefinition } from '../MapTypes';
 import { NEON_GREEN, NEON_CYAN, NEON_PINK, PANEL_BG } from '../../types';
+import { LOW_GRAVITY_DOME_SCALE } from '../../config/constants';
 
 export const OrbitalStationMap: MapDefinition = {
   id: 'orbital_station',
@@ -122,7 +123,7 @@ export const OrbitalStationMap: MapDefinition = {
       x: 0,
       y: 0.5,
       radius: 6.2,
-      scale: 0.35,
+      scale: LOW_GRAVITY_DOME_SCALE,
     },
   ],
   portals: [

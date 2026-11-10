@@ -20,6 +20,7 @@ export class Engine {
   private _timeScale = 1.0;
   private _timeScaleRemaining = 0;
   private _pingMs = 0;
+  private _bufferMs = 50;
 
   constructor(hooks: EngineHooks, uiLayer: Container) {
     this._hooks = hooks;
@@ -46,6 +47,10 @@ export class Engine {
 
   setPing(pingMs: number): void {
     this._pingMs = pingMs;
+  }
+
+  setInterpolationBuffer(bufferMs: number): void {
+    this._bufferMs = bufferMs;
   }
 
   hitStop(durationMs: number): void {
@@ -113,6 +118,6 @@ export class Engine {
       this._frameCount = 0;
     }
 
-    this._hud.update(this._displayFps, frameMs, this._physStepMs, this._pingMs);
+    this._hud.update(this._displayFps, frameMs, this._physStepMs, this._pingMs, this._bufferMs);
   };
 }

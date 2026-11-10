@@ -4,6 +4,7 @@
 // bouncy trampolines, and a fun-house mirror zone that flips horizontal control for 2 seconds.
 
 import type { MapDefinition } from '../MapTypes';
+import { FUNHOUSE_MIRROR_DURATION_SEC } from '../../config/constants';
 
 export const HauntedCarnivalMap: MapDefinition = {
   id: 'haunted_carnival',
@@ -190,7 +191,7 @@ export const HauntedCarnivalMap: MapDefinition = {
       y: 6.5,
       w: 5.5,
       h: 2.8,
-      durationSec: 2.0,
+      durationSec: FUNHOUSE_MIRROR_DURATION_SEC,
       color: 0xff00aa,
     },
   ],

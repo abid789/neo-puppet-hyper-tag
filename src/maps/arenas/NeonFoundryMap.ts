@@ -4,6 +4,11 @@
 
 import type { MapDefinition } from '../MapTypes';
 import { NEON_CYAN, NEON_PINK, PANEL_BG, DARK_BG } from '../../types';
+import {
+  LASER_GATE_PERIOD_SEC,
+  LASER_GATE_ACTIVE_SEC,
+  LASER_GATE_TELEGRAPH_SEC,
+} from '../../config/constants';
 
 export const NeonFoundryMap: MapDefinition = {
   id: 'neon_foundry',
@@ -167,9 +172,9 @@ export const NeonFoundryMap: MapDefinition = {
       y: 6.0,
       w: 0.35,
       h: 3.8,
-      periodSec: 4.0,
-      activeSec: 2.0,
-      telegraphSec: 1.2,
+      periodSec: LASER_GATE_PERIOD_SEC,
+      activeSec: LASER_GATE_ACTIVE_SEC,
+      telegraphSec: LASER_GATE_TELEGRAPH_SEC,
     },
     // Top laser gate sweeping across upper bridge
     {
@@ -178,9 +183,9 @@ export const NeonFoundryMap: MapDefinition = {
       y: -0.85,
       w: 6.8,
       h: 0.3,
-      periodSec: 4.0,
+      periodSec: LASER_GATE_PERIOD_SEC,
       activeSec: 1.8,
-      telegraphSec: 1.2,
+      telegraphSec: LASER_GATE_TELEGRAPH_SEC,
     },
   ],
   jumpPads: [

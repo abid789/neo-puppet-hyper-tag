@@ -11,8 +11,9 @@ import { Puppet } from './entities/Puppet';
 import { PowerUpManager } from './entities/PowerUpManager';
 import { MapManager } from './maps/MapManager';
 import { MatchController } from './game/MatchController';
-import { PuppetBotController, type BotDifficulty } from './ai/PuppetBotController';
+import { PuppetBotController, type BotDifficulty, type BotPersonality } from './ai/PuppetBotController';
 import { Engine } from './core/Engine';
+import { MapBalanceHud } from './ui/MapBalanceHud';
 
 // Phase 4 Networking & Social modules
 import { NetworkManager } from './network/NetworkManager';
@@ -141,10 +142,11 @@ async function main(): Promise<void> {
 
   // ── AI Bot Controllers ───────────────────────────────────────────────────────
   let botDifficulty: BotDifficulty = 'Pro';
+  let botPersonality: BotPersonality = 'Aggressive';
   let activeBotCount = 3;
-  const bot2 = new PuppetBotController(puppet2, physWorld, botDifficulty);
-  const bot3 = new PuppetBotController(puppet3, physWorld, botDifficulty);
-  const bot4 = new PuppetBotController(puppet4, physWorld, botDifficulty);
+  const bot2 = new PuppetBotController(puppet2, physWorld, botDifficulty, botPersonality);
+  const bot3 = new PuppetBotController(puppet3, physWorld, botDifficulty, botPersonality);
+  const bot4 = new PuppetBotController(puppet4, physWorld, botDifficulty, botPersonality);
   const botPool = [bot2, bot3, bot4];
 
   let activePuppets: Puppet[] = [puppet1, puppet2, puppet3, puppet4];
@@ -196,6 +198,8 @@ async function main(): Promise<void> {
   emoteWheel.setPuppets(activePuppets);
   const lobbyUI = new LobbyUI(net);
   const uiManager = new UIManager();
+  const mapBalanceHud = new MapBalanceHud();
+  void mapBalanceHud;
 
   const updateActiveParticipants = (): void => {
     activePuppets = [puppet1, ...allPuppetPool.slice(1, 1 + activeBotCount)];
@@ -223,8 +227,11 @@ async function main(): Promise<void> {
       matchController.setGameMode(cfg.modeIndex);
       matchController.setRoundDuration(cfg.durationSec);
       activeBotCount = cfg.botCount;
+      botDifficulty = cfg.botDifficulty;
+      botPersonality = cfg.botPersonality;
       for (let i = 0; i < botPool.length; i++) {
         botPool[i].setDifficulty(cfg.botDifficulty);
+        botPool[i].setPersonality(cfg.botPersonality);
       }
       updateActiveParticipants();
       matchController.startMatch();
@@ -319,6 +326,23 @@ async function main(): Promise<void> {
         botPool[i].setDifficulty(botDifficulty);
       }
       console.log(`[AI Bots] Difficulty set to: ${botDifficulty}`);
+      Toast.show(`Bot Difficulty: ${botDifficulty.toUpperCase()}`);
+    }
+
+    // V = Cycle Bot Personality: Aggressive -> Cautious -> Random
+    if (e.code === 'KeyV') {
+      if (botPersonality === 'Aggressive') {
+        botPersonality = 'Cautious';
+      } else if (botPersonality === 'Cautious') {
+        botPersonality = 'Random';
+      } else {
+        botPersonality = 'Aggressive';
+      }
+      for (let i = 0; i < botPool.length; i++) {
+        botPool[i].setPersonality(botPersonality);
+      }
+      console.log(`[AI Bots] Personality set to: ${botPersonality}`);
+      Toast.show(`Bot Personality: ${botPersonality.toUpperCase()}`);
     }
 
     // N = Cycle Active Bot Count: 1 Bot -> 2 Bots -> 3 Bots
@@ -338,8 +362,9 @@ async function main(): Promise<void> {
   engine = new Engine(
     {
       onFixedUpdate: (dt: number): void => {
-        // NetSync fixed update
+        // NetSync fixed update & dynamic interpolation buffer sync
         netSync.fixedUpdate(dt);
+        engine.setInterpolationBuffer(netSync.currentInterpolationDelay);
         emoteWheel.update(dt);
 
         // Update AI Bots

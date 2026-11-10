@@ -63,9 +63,29 @@ export class UIManager {
             durationSec:   120,
             modifier:      'normal',
             botCount:      3,
-            botDifficulty: 'Pro',
+            botDifficulty: this.customizer.config.botDifficulty,
+            botPersonality: this.customizer.config.botPersonality,
           });
         }
+      },
+      onPracticeMode: () => {
+        SoundEngine.getInstance().playCountdownBeep(true);
+        this.goToMatch();
+        if (this._onStartGameCb) {
+          this._onStartGameCb({
+            mapIndex:      0,
+            modeIndex:     0,
+            durationSec:   90,
+            modifier:      'normal',
+            botCount:      3,
+            botDifficulty: this.customizer.config.botDifficulty,
+            botPersonality: this.customizer.config.botPersonality,
+          });
+        }
+      },
+      onShowRecap: () => {
+        SoundEngine.getInstance().playFootstep('metal');
+        this.podium.showRecapModal();
       },
       onHostLobby: () => {
         SoundEngine.getInstance().playJump(false);
@@ -100,12 +120,13 @@ export class UIManager {
         this.goToMatch();
         if (this._onStartGameCb) {
           this._onStartGameCb({
-            mapIndex:      0,
-            modeIndex:     0,
-            durationSec:   120,
-            modifier:      'normal',
-            botCount:      3,
-            botDifficulty: 'Pro',
+            mapIndex:      this.customizer.config.mapIndex,
+            modeIndex:     this.customizer.config.modeIndex,
+            durationSec:   this.customizer.config.durationSec,
+            modifier:      this.customizer.config.modifier,
+            botCount:      this.customizer.config.botCount,
+            botDifficulty: this.customizer.config.botDifficulty,
+            botPersonality: this.customizer.config.botPersonality,
           });
         }
       },
@@ -129,12 +150,13 @@ export class UIManager {
         this.goToMatch();
         if (this._onStartGameCb) {
           this._onStartGameCb({
-            mapIndex:      0,
-            modeIndex:     0,
-            durationSec:   120,
-            modifier:      'normal',
-            botCount:      3,
-            botDifficulty: 'Pro',
+            mapIndex:      this.customizer.config.mapIndex,
+            modeIndex:     this.customizer.config.modeIndex,
+            durationSec:   this.customizer.config.durationSec,
+            modifier:      this.customizer.config.modifier,
+            botCount:      this.customizer.config.botCount,
+            botDifficulty: this.customizer.config.botDifficulty,
+            botPersonality: this.customizer.config.botPersonality,
           });
         }
       },

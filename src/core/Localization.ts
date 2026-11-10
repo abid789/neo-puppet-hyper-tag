@@ -14,6 +14,8 @@ export interface TranslationDictionary {
 
   // Main Menu
   playQuickMatch:    string;
+  practiceMode:      string;
+  matchRecap:        string;
   hostLobby:         string;
   joinRoom:          string;
   customizer:        string;
@@ -68,6 +70,12 @@ export interface TranslationDictionary {
   diffCasual:        string;
   diffPro:           string;
   diffNightmare:     string;
+
+  // Personalities
+  personalityLabel:  string;
+  persAggressive:    string;
+  persCautious:      string;
+  persRandom:        string;
 
   // HUD
   timeRemaining:     string;
@@ -128,6 +136,8 @@ const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     loadingWasm:       'INITIALISING NEURAL PHYSICS & GRAPHICS CORE…',
 
     playQuickMatch:    'QUICK MATCH (SOLO / BOTS)',
+    practiceMode:      'PRACTICE MODE (OFFLINE BOTS)',
+    matchRecap:        'LAST MATCH RECAP',
     hostLobby:         'CREATE PARTY LOBBY',
     joinRoom:          'JOIN VIA ROOM CODE',
     customizer:        'MATCH CUSTOMIZER',
@@ -177,6 +187,11 @@ const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     diffCasual:        'CASUAL',
     diffPro:           'PRO',
     diffNightmare:     'NIGHTMARE',
+
+    personalityLabel:  'BOT PERSONALITY',
+    persAggressive:    'AGGRESSIVE',
+    persCautious:      'CAUTIOUS',
+    persRandom:        'RANDOM',
 
     timeRemaining:     'TIME REMAINING',
     score:             'PTS',
@@ -230,6 +245,8 @@ const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     loadingWasm:       'ফিজিক্স ও গ্রাফিক্স ইঞ্জিন চালু হচ্ছে…',
 
     playQuickMatch:    'কুইক ম্যাচ (একাকী / বট)',
+    practiceMode:      'অনুশীলন মোড (অফলাইন বট)',
+    matchRecap:        'শেষ ম্যাচের ফলাফল',
     hostLobby:         'নতুন লবি তৈরি করুন',
     joinRoom:          'রুম কোড দিয়ে যোগ দিন',
     customizer:        'ম্যাচ কাস্টমাইজ',
@@ -279,6 +296,11 @@ const TRANSLATIONS: Record<SupportedLanguage, TranslationDictionary> = {
     diffCasual:        'সহজ',
     diffPro:           'প্রো',
     diffNightmare:     'নাইটমেয়ার',
+
+    personalityLabel:  'বট ব্যক্তিত্ব',
+    persAggressive:    'আক্রমণাত্মক',
+    persCautious:      'সতর্ক',
+    persRandom:        'এলোমেলো',
 
     timeRemaining:     'অবশিষ্ট সময়',
     score:             'পয়েন্ট',

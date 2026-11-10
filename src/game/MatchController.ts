@@ -14,6 +14,7 @@ import { InfectionMode } from './Modes/InfectionMode';
 import { LastSurvivor } from './Modes/LastSurvivor';
 import { TagRulesEngine } from './TagRulesEngine';
 import { ScoringEngine, type PlayerMatchStats } from './ScoringEngine';
+import { MatchRecapManager } from './MatchRecap';
 import type { MapManager } from '../maps/MapManager';
 import type { Camera } from '../graphics/Camera';
 import type { Engine } from '../core/Engine';
@@ -156,6 +157,7 @@ export class MatchController {
     this._scoring.reset();
     this._tagRules.reset();
     this._tagFeed.length = 0;
+    MatchRecapManager.getInstance().startNewMatch();
     this.currentMode.init(this._puppets);
 
     this._transitionTo('PRE_MATCH_INTRO', 2.8);
@@ -225,6 +227,7 @@ export class MatchController {
         const earlyRoundOver = this.currentMode.isRoundOver?.() ?? false;
 
         if (this._roundTimeRemaining <= 0 || earlyRoundOver) {
+          this._finalizeMatchRecap();
           this._transitionTo('ROUND_SUMMARY_PODIUM', 5.5);
         }
         break;
@@ -407,6 +410,39 @@ export class MatchController {
     }
 
     return mvpTitles;
+  }
+
+  private _finalizeMatchRecap(): void {
+    const stats = this._scoring.getAllStats();
+    const map = this._mapManager.currentMap;
+    const winner = stats[0];
+    const winnerSpawn = winner ? (map.spawns[winner.playerIndex % map.spawns.length]?.x ?? 0) : 0;
+
+    const players = this._puppets.map(p => {
+      const idx = p.getPlayerIndex();
+      const st = this._scoring.getPlayerStats(idx);
+      const hex = '#' + p.getColorPrimary().toString(16).padStart(6, '0');
+      return {
+        playerIndex:   idx,
+        name:          `PILOT ${idx + 1}`,
+        color:         hex,
+        score:         st?.score ?? 0,
+        tagsGiven:     st?.tagsMade ?? 0,
+        timesTagged:   st?.timesTagged ?? 0,
+        nearMisses:    st?.nearMisses ?? 0,
+        fallsCaused:   st?.fallsCaused ?? 0,
+        longestStreak: st?.maxStreak ?? 0,
+      };
+    });
+
+    MatchRecapManager.getInstance().finalizeMatchRecap({
+      mapId:        map.id,
+      mapName:      map.name,
+      modeName:     this.currentMode.name,
+      durationSec:  this._roundDuration,
+      players,
+      winnerSpawnX: winnerSpawn,
+    });
   }
 
   private _onKeyDown = (e: KeyboardEvent): void => {

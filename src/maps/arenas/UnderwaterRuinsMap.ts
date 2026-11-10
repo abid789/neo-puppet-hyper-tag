@@ -4,6 +4,7 @@
 // and a sunken archway that slows movement.
 
 import type { MapDefinition } from '../MapTypes';
+import { BUBBLE_VENT_IMPULSE, SUNKEN_ARCHWAY_SLOW_FACTOR } from '../../config/constants';
 
 export const UnderwaterRuinsMap: MapDefinition = {
   id: 'underwater_ruins',
@@ -188,7 +189,7 @@ export const UnderwaterRuinsMap: MapDefinition = {
       h: 5.0,
       periodSec: 4.2,
       activeSec: 2.6,
-      impulse: { x: 0, y: -19.0 },
+      impulse: BUBBLE_VENT_IMPULSE,
     },
     {
       id: 'bubble_vent_right',
@@ -198,7 +199,7 @@ export const UnderwaterRuinsMap: MapDefinition = {
       h: 5.0,
       periodSec: 4.2,
       activeSec: 2.6,
-      impulse: { x: 0, y: -19.0 },
+      impulse: BUBBLE_VENT_IMPULSE,
     },
   ],
   slowZones: [
@@ -209,7 +210,7 @@ export const UnderwaterRuinsMap: MapDefinition = {
       y: 5.2,
       w: 6.2,
       h: 3.5,
-      factor: 0.52,
+      factor: SUNKEN_ARCHWAY_SLOW_FACTOR,
       color: 0x00ffc2,
     },
   ],

@@ -3,6 +3,8 @@
 
 import { Localization } from '../core/Localization';
 import { SoundEngine } from '../audio/SoundEngine';
+import { MatchRecapManager, type MatchRecapData } from '../game/MatchRecap';
+import { Toast } from './Toast';
 
 export interface PodiumResultItem {
   playerIndex: number;
@@ -44,6 +46,56 @@ export class PodiumScreen {
     const apex = [...results].sort((a, b) => b.tagsMade - a.tagsMade)[0];
     const untouch = [...results].sort((a, b) => a.taggedCount - b.taggedCount)[0];
     const ankle = [...results].sort((a, b) => b.nearMisses - a.nearMisses)[0];
+
+    const recap = MatchRecapManager.getInstance().getLatestRecap();
+    let bestMomentHtml = '';
+    if (recap && recap.highestMoment) {
+      const m = recap.highestMoment;
+      const mins = Math.floor(m.timestampSec / 60);
+      const secs = Math.floor(m.timestampSec % 60);
+      const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      bestMomentHtml = `
+        <div class="neo-best-moment">
+          ⚡ <strong>BEST MOMENT:</strong> ${m.playerName} scored <span class="moment-pts">+${m.scoreEarned} PTS</span> (${m.label}) at ${timeStr}
+        </div>
+      `;
+    }
+
+    const recapTableHtml = recap ? `
+      <div class="neo-podium-recap">
+        <div class="neo-recap-header">
+          <span>MATCH RECAP // ${recap.mapName}</span>
+          <span class="mode-tag">${recap.modeName}</span>
+        </div>
+        <table class="neo-recap-table">
+          <thead>
+            <tr>
+              <th>PILOT</th>
+              <th>SCORE</th>
+              <th>TAGS</th>
+              <th>HITS</th>
+              <th>DODGES</th>
+              <th>FALLS</th>
+              <th>STREAK</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recap.players.map(p => `
+              <tr>
+                <td style="color:${p.color}; font-weight:bold">${p.name}</td>
+                <td class="cell-score">${p.score}</td>
+                <td>${p.tagsGiven}</td>
+                <td>${p.timesTagged}</td>
+                <td>${p.nearMisses}</td>
+                <td>${p.fallsCaused}</td>
+                <td>⚡ ${p.longestStreak}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ${bestMomentHtml}
+      </div>
+    ` : '';
 
     const screen = document.createElement('div');
     screen.id = 'neo-podium-screen';
@@ -100,6 +152,9 @@ export class PodiumScreen {
         ` : ''}
       </div>
 
+      <!-- Match Stats Recap Panel -->
+      ${recapTableHtml}
+
       <!-- Action Footer -->
       <div class="neo-podium-footer">
         <button id="neo-podium-lobby" class="neo-btn-secondary">${Localization.t('backToMenu')}</button>
@@ -123,6 +178,78 @@ export class PodiumScreen {
     };
   }
 
+  public showRecapModal(recap?: MatchRecapData | null): void {
+    const targetRecap = recap ?? MatchRecapManager.getInstance().getLatestRecap();
+    if (!targetRecap) {
+      Toast.show('NO RECAP DATA AVAILABLE — COMPLETE A MATCH FIRST!');
+      return;
+    }
+
+    this.hide();
+
+    const m = targetRecap.highestMoment;
+    let momentHtml = '';
+    if (m) {
+      const mins = Math.floor(m.timestampSec / 60);
+      const secs = Math.floor(m.timestampSec % 60);
+      const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      momentHtml = `
+        <div class="neo-best-moment">
+          ⚡ <strong>BEST MOMENT:</strong> ${m.playerName} scored <span class="moment-pts">+${m.scoreEarned} PTS</span> (${m.label}) at ${timeStr}
+        </div>
+      `;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'neo-podium-screen';
+    modal.innerHTML = `
+      <div class="neo-podium-header">
+        <h1 class="neo-podium-title">📊 MATCH RECAP</h1>
+        <p class="neo-podium-sub">${targetRecap.mapName} // ${targetRecap.modeName}</p>
+      </div>
+
+      <div class="neo-podium-recap" style="max-width: 680px; width: 100%;">
+        <table class="neo-recap-table">
+          <thead>
+            <tr>
+              <th>PILOT</th>
+              <th>SCORE</th>
+              <th>TAGS</th>
+              <th>HITS</th>
+              <th>DODGES</th>
+              <th>FALLS</th>
+              <th>STREAK</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${targetRecap.players.map(p => `
+              <tr>
+                <td style="color:${p.color}; font-weight:bold">${p.name}</td>
+                <td class="cell-score">${p.score}</td>
+                <td>${p.tagsGiven}</td>
+                <td>${p.timesTagged}</td>
+                <td>${p.nearMisses}</td>
+                <td>${p.fallsCaused}</td>
+                <td>⚡ ${p.longestStreak}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ${momentHtml}
+      </div>
+
+      <div class="neo-podium-footer">
+        <button id="neo-recap-close" class="neo-btn-primary">✕ CLOSE RECAP</button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    this._container = modal;
+
+    const closeBtn = modal.querySelector('#neo-recap-close') as HTMLButtonElement;
+    closeBtn.onclick = () => this.hide();
+  }
+
   public hide(): void {
     if (this._container) {
       this._container.remove();
@@ -139,8 +266,8 @@ export class PodiumScreen {
         position: fixed; inset: 0; z-index: 11000;
         background: radial-gradient(circle at center, rgba(13,13,31,0.96) 0%, rgba(5,5,15,0.99) 100%);
         backdrop-filter: blur(14px); font-family: 'Orbitron', monospace; color: #fff;
-        display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 40px;
-        animation: neoFadeIn 0.5s ease-out;
+        display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 24px 40px;
+        animation: neoFadeIn 0.5s ease-out; overflow-y: auto;
       }
       @keyframes neoFadeIn { from { opacity: 0; } to { opacity: 1; } }
       .neo-podium-header { text-align: center; }
@@ -148,43 +275,63 @@ export class PodiumScreen {
       .neo-podium-sub { font-family: 'Rajdhani', sans-serif; font-size: 16px; color: #aaa; margin-top: 6px; }
       .neo-podium-sub strong { color: #00ffff; }
       .neo-podium-stage {
-        display: flex; align-items: flex-end; justify-content: center; gap: 20px; width: 100%; max-width: 700px;
+        display: flex; align-items: flex-end; justify-content: center; gap: 20px; width: 100%; max-width: 700px; margin: 10px 0;
       }
       .neo-podium-stand {
         flex: 1; display: flex; flex-direction: column; align-items: center;
       }
       .neo-podium-crown { font-size: 32px; animation: floatPedestal 2s infinite ease-in-out; margin-bottom: -10px; z-index: 2; }
       .neo-podium-avatar {
-        width: 50px; height: 50px; border-radius: 50%; border: 2px solid #fff; margin-bottom: 10px;
+        width: 44px; height: 44px; border-radius: 50%; border: 2px solid #fff; margin-bottom: 8px;
       }
-      .neo-podium-pname { font-size: 12px; font-weight: 900; color: #fff; margin-bottom: 2px; }
-      .neo-podium-score { font-size: 11px; color: #88ffff; margin-bottom: 12px; }
+      .neo-podium-pname { font-size: 11px; font-weight: 900; color: #fff; margin-bottom: 2px; }
+      .neo-podium-score { font-size: 10px; color: #88ffff; margin-bottom: 8px; }
       .neo-podium-block {
         width: 100%; border: 1px solid rgba(0,255,255,0.3); border-radius: 6px 6px 0 0;
-        display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900;
+        display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900;
         background: rgba(255,255,255,0.04);
       }
       .neo-podium-stand.first .neo-podium-block {
-        height: 160px; background: linear-gradient(to top, rgba(255,238,0,0.15), rgba(255,238,0,0.3));
+        height: 120px; background: linear-gradient(to top, rgba(255,238,0,0.15), rgba(255,238,0,0.3));
         border-color: #ffee00; color: #ffee00; text-shadow: 0 0 15px #ffee00;
       }
       .neo-podium-stand.second .neo-podium-block {
-        height: 110px; background: linear-gradient(to top, rgba(0,255,255,0.1), rgba(0,255,255,0.25));
+        height: 85px; background: linear-gradient(to top, rgba(0,255,255,0.1), rgba(0,255,255,0.25));
         border-color: #00ffff; color: #00ffff;
       }
       .neo-podium-stand.third .neo-podium-block {
-        height: 80px; background: linear-gradient(to top, rgba(255,0,102,0.1), rgba(255,0,102,0.25));
+        height: 65px; background: linear-gradient(to top, rgba(255,0,102,0.1), rgba(255,0,102,0.25));
         border-color: #ff0066; color: #ff0066;
       }
       .neo-podium-mvps {
-        display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 500px;
+        display: flex; gap: 8px; width: 100%; max-width: 680px; justify-content: center;
       }
       .neo-mvp-badge {
-        background: rgba(255,255,255,0.03); border: 1px solid rgba(0,255,255,0.2);
-        padding: 8px 14px; border-radius: 4px; font-size: 11px; display: flex; justify-content: space-between;
+        flex: 1; background: rgba(255,255,255,0.03); border: 1px solid rgba(0,255,255,0.2);
+        padding: 6px 10px; border-radius: 4px; font-size: 10px; display: flex; flex-direction: column; gap: 2px;
       }
       .neo-mvp-badge span { color: #00ffff; font-weight: bold; }
-      .neo-podium-footer { display: flex; gap: 16px; }
+
+      /* Match Recap Table */
+      .neo-podium-recap {
+        width: 100%; max-width: 680px; background: rgba(0,0,0,0.45); border: 1px solid rgba(0,255,255,0.25);
+        border-radius: 6px; padding: 12px; margin: 8px 0;
+      }
+      .neo-recap-header {
+        display: flex; justify-content: space-between; font-size: 10px; color: #88ffff;
+        letter-spacing: 1px; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid rgba(0,255,255,0.2); padding-bottom: 4px;
+      }
+      .mode-tag { color: #ffee00; }
+      .neo-recap-table { width: 100%; border-collapse: collapse; font-size: 10px; text-align: center; }
+      .neo-recap-table th { color: #888; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+      .neo-recap-table td { padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+      .neo-recap-table td.cell-score { color: #00ffff; font-weight: 900; }
+      .neo-best-moment {
+        margin-top: 10px; padding: 6px 10px; background: rgba(255,238,0,0.08); border-left: 3px solid #ffee00;
+        font-family: 'Rajdhani', sans-serif; font-size: 13px; color: #fff;
+      }
+      .neo-best-moment .moment-pts { color: #ffee00; font-weight: 900; font-family: 'Orbitron', monospace; }
+      .neo-podium-footer { display: flex; gap: 16px; margin-top: 10px; }
     `;
     document.head.appendChild(style);
   }

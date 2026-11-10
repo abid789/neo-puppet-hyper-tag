@@ -4,6 +4,12 @@
 // and quicksand patches that slow movement.
 
 import type { MapDefinition } from '../MapTypes';
+import {
+  QUICKSAND_SLOW_FACTOR,
+  JUMP_PAD_THERMAL_IMPULSE_LEFT,
+  JUMP_PAD_THERMAL_IMPULSE_RIGHT,
+  WIND_GUST_SANDSTORM_FORCE,
+} from '../../config/constants';
 
 export const DesertSandstormMap: MapDefinition = {
   id: 'desert_sandstorm',
@@ -155,7 +161,7 @@ export const DesertSandstormMap: MapDefinition = {
     intervalSec: 11.0,
     warningSec: 2.5,
     durationSec: 3.8,
-    force: { x: -18.0, y: -2.5 }, // Sandstorm gust sweep
+    force: WIND_GUST_SANDSTORM_FORCE, // Sandstorm gust sweep
   },
   slowZones: [
     // Quicksand patch on left desert floor
@@ -165,7 +171,7 @@ export const DesertSandstormMap: MapDefinition = {
       y: 7.8,
       w: 3.2,
       h: 1.8,
-      factor: 0.45,
+      factor: QUICKSAND_SLOW_FACTOR,
       color: 0xcc8800,
     },
     // Quicksand patch on right desert floor
@@ -175,7 +181,7 @@ export const DesertSandstormMap: MapDefinition = {
       y: 7.8,
       w: 3.2,
       h: 1.8,
-      factor: 0.45,
+      factor: QUICKSAND_SLOW_FACTOR,
       color: 0xcc8800,
     },
   ],
@@ -187,7 +193,7 @@ export const DesertSandstormMap: MapDefinition = {
       y: 7.8,
       w: 2.0,
       h: 0.3,
-      impulse: { x: 5.0, y: -18.0 },
+      impulse: JUMP_PAD_THERMAL_IMPULSE_LEFT,
       color: 0xffaa00,
     },
     {
@@ -196,7 +202,7 @@ export const DesertSandstormMap: MapDefinition = {
       y: 7.8,
       w: 2.0,
       h: 0.3,
-      impulse: { x: -5.0, y: -18.0 },
+      impulse: JUMP_PAD_THERMAL_IMPULSE_RIGHT,
       color: 0xffaa00,
     },
   ],

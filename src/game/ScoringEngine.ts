@@ -3,6 +3,7 @@
 
 import { Container, Text, TextStyle } from 'pixi.js';
 import { PPM } from '../types';
+import { MatchRecapManager } from './MatchRecap';
 
 export interface PlayerMatchStats {
   playerIndex:        number;
@@ -88,6 +89,14 @@ export class ScoringEngine {
 
     const earned = Math.round(basePoints * mult);
     stats.score += earned;
+
+    // Track for match recap best moment
+    MatchRecapManager.getInstance().recordScoreEvent(
+      playerIndex,
+      `PILOT ${playerIndex + 1}`,
+      earned,
+      label,
+    );
 
     const popupText = mult > 1.0 ? `+${earned} (${mult}x ${label})` : `+${earned} ${label}`;
     this.spawnFloatingText(worldX * PPM, worldY * PPM - 25, popupText, color);

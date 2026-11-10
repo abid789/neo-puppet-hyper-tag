@@ -4,6 +4,11 @@
 
 import type { MapDefinition } from '../MapTypes';
 import { NEON_ORANGE, NEON_YELLOW, PANEL_BG } from '../../types';
+import {
+  LAVA_SURGE_INTERVAL_SEC,
+  LAVA_SURGE_WARNING_SEC,
+  LAVA_SURGE_DURATION_SEC,
+} from '../../config/constants';
 
 export const MagmaReactorMap: MapDefinition = {
   id: 'magma_reactor',
@@ -159,9 +164,9 @@ export const MagmaReactorMap: MapDefinition = {
     },
   ],
   lavaSurge: {
-    intervalSec: 20.0,
-    warningSec: 3.0,
-    surgeDurationSec: 4.5,
+    intervalSec: LAVA_SURGE_INTERVAL_SEC,
+    warningSec: LAVA_SURGE_WARNING_SEC,
+    surgeDurationSec: LAVA_SURGE_DURATION_SEC,
     baseY: 8.8,
     peakY: 5.2,
   },
