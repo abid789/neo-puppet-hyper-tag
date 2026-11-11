@@ -291,15 +291,9 @@ export class PuppetBotController {
   }
 
   private _hasObstacleAhead(pos: Vec2, goingRight: boolean): boolean {
-    const rayDir = goingRight ? 1 : -1;
-    const ray = new (this._physWorld.world as any).constructor.Ray(
-      { x: pos.x, y: pos.y },
-      { x: rayDir, y: 0 },
-    );
-    void ray;
-
-    // Simple geometric raycast check against borders or high walls
-    return goingRight ? pos.x > 13.5 : pos.x < -13.5;
+    // Simple geometric obstacle check against arena borders or obstacles ahead
+    if (goingRight ? pos.x > 13.5 : pos.x < -13.5) return true;
+    return this._physWorld.castRay(pos, { x: goingRight ? 1 : -1, y: 0 }, 1.2);
   }
 
   private _avoidLavaAndPits(pos: Vec2, _vel: Vec2): void {

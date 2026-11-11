@@ -190,8 +190,8 @@ async function main(): Promise<void> {
 
   const matchController = new MatchController(
     {
-      setTimeScale: (scale: number, durationSec: number) => engine.setTimeScale(scale, durationSec),
-      getTimeScale: () => engine.getTimeScale(),
+      setTimeScale: (scale: number, durationSec: number) => engine?.setTimeScale(scale, durationSec),
+      getTimeScale: () => engine?.getTimeScale() ?? 1.0,
     } as any,
     camera,
     mapManager,
@@ -329,38 +329,6 @@ async function main(): Promise<void> {
       uiManager.goToLobby(isHost, roomCode, net.roomPasscode);
     }
   });
-
-  // Forward live Ping from NetSync to Engine Performance HUD
-  netSync.onPingUpdated((ping) => {
-    engine.setPing(ping);
-  });
-
-  // Initial navigation (checking passcode if protected)
-  if (initialRoomFromUrl) {
-    net.checkRoomProtected(initialRoomFromUrl).then(async (passHash) => {
-      if (passHash) {
-        const authorized = await RoomLinkManager.promptForPasscode(initialRoomFromUrl, passHash);
-        if (!authorized) {
-          Toast.show('Passcode verification failed. Returning to menu.');
-          RoomLinkManager.clearRoomFromUrl();
-          uiManager.goToMenu();
-          return;
-        }
-      }
-
-      const joined = await net.joinRoom(initialRoomFromUrl);
-      if (joined) {
-        lobbyUI.update();
-        presence.updateStatus('IN_LOBBY', initialRoomFromUrl);
-        uiManager.goToLobby(false, initialRoomFromUrl);
-        Toast.show(`Connected to room: ${initialRoomFromUrl}`);
-      }
-    });
-  } else {
-    // Start on Main Menu with background puppet chase
-    uiManager.goToMenu();
-    engine.setTimeScale(0.48, 99999);
-  }
 
   // ── Keyboard shortcut listeners ──────────────────────────────────────────────
   window.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -585,8 +553,40 @@ async function main(): Promise<void> {
     }
   });
 
+  // Forward live Ping from NetSync to Engine Performance HUD
+  netSync.onPingUpdated((ping) => {
+    engine.setPing(ping);
+  });
+
   // ── 10-Minute Soak Test Runner (?soak=1) ─────────────────────────────────────
   SoakTest.startIfRequested(mapManager, particles, physWorld);
+
+  // ── Initial navigation (checking passcode if protected) ───────────────────────
+  if (initialRoomFromUrl) {
+    net.checkRoomProtected(initialRoomFromUrl).then(async (passHash) => {
+      if (passHash) {
+        const authorized = await RoomLinkManager.promptForPasscode(initialRoomFromUrl, passHash);
+        if (!authorized) {
+          Toast.show('Passcode verification failed. Returning to menu.');
+          RoomLinkManager.clearRoomFromUrl();
+          uiManager.goToMenu();
+          return;
+        }
+      }
+
+      const joined = await net.joinRoom(initialRoomFromUrl);
+      if (joined) {
+        lobbyUI.update();
+        presence.updateStatus('IN_LOBBY', initialRoomFromUrl);
+        uiManager.goToLobby(false, initialRoomFromUrl);
+        Toast.show(`Connected to room: ${initialRoomFromUrl}`);
+      }
+    });
+  } else {
+    // Start on Main Menu with background puppet chase
+    uiManager.goToMenu();
+    engine.setTimeScale(0.48, 99999);
+  }
 
   // ── Hide loading overlay ───────────────────────────────────────────────────────
   overlay.classList.add('hidden');

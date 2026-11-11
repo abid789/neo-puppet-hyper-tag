@@ -189,4 +189,10 @@ export class PhysicsWorld {
     const hit = this.world.castRay(ray, checkDist, true);
     return hit !== null;
   }
+
+  castRay(origin: Vec2, dir: Vec2, maxToi: number): boolean {
+    const ray = new RAPIER.Ray(origin, dir);
+    const hit = this.world.castRay(ray, maxToi, true);
+    return hit !== null;
+  }
 }
