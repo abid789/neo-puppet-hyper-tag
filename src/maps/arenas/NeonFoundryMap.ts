@@ -1,6 +1,6 @@
 // src/maps/arenas/NeonFoundryMap.ts
-// Neon Cyber Foundry: Multi-level industrial synthwave arena with conveyor belts,
-// toggling laser gates with warning telegraphs, and high-impulse jump pads.
+// Neon Cyber Foundry: Flat ground arena with industrial hurdles, crates, and barriers.
+// Designed for fast horizontal puppet chasing, punching, and obstacle-vaulting tag gameplay.
 
 import type { MapDefinition } from '../MapTypes';
 import { NEON_CYAN, NEON_PINK, PANEL_BG, DARK_BG } from '../../types';
@@ -13,12 +13,12 @@ import {
 export const NeonFoundryMap: MapDefinition = {
   id: 'neon_foundry',
   name: 'NEON CYBER FOUNDRY',
-  subtitle: 'Industrial Heavy Smelter // Sector 09',
+  subtitle: 'Flat Brawler Ground // Obstacle Hurdles',
   bounds: {
     minX: -16,
     maxX:  16,
-    minY: -7,
-    maxY:  10,
+    minY: -4,
+    maxY:  9,
   },
   palette: {
     primary:    NEON_CYAN,
@@ -43,182 +43,145 @@ export const NeonFoundryMap: MapDefinition = {
   ],
   weather: {
     kind: 'neon_sparks',
-    density: 40,
-    speed: { x: 30, y: -45 },
+    density: 35,
+    speed: { x: 25, y: -30 },
     color: 0x00ffff,
-    size: 2.5,
+    size: 2.2,
     alpha: 0.75,
   },
   spawns: [
-    { x: -7, y: 4.5 },
-    { x:  7, y: 4.5 },
-    { x: -4, y: 0.5 },
-    { x:  4, y: 0.5 },
+    { x: -6.5, y: 4.7 },
+    { x:  6.5, y: 4.7 },
+    { x: -2.0, y: 4.7 },
+    { x:  2.0, y: 4.7 },
   ],
   powerUpNodes: [
-    { x:  0, y: -2.0 },
-    { x: -9, y:  0.5 },
-    { x:  9, y:  0.5 },
+    { x: -4.5, y: 3.4 },
+    { x:  4.5, y: 3.4 },
+    { x:  0.0, y: 2.2 },
   ],
   staticPlatforms: [
-    // Main base ground
+    // ── Continuous Main Flat Floor ──────────────────────────────────────────
     {
-      id: 'ground_left',
-      x: -8.5,
-      y: 8.2,
-      w: 9.0,
-      h: 0.6,
-      color: PANEL_BG,
-      strokeColor: NEON_CYAN,
-    },
-    {
-      id: 'ground_right',
-      x: 8.5,
-      y: 8.2,
-      w: 9.0,
-      h: 0.6,
-      color: PANEL_BG,
-      strokeColor: NEON_CYAN,
-    },
-    // Mid gantries
-    {
-      id: 'mid_gantry_left',
-      x: -8.0,
-      y: 2.8,
-      w: 5.5,
-      h: 0.45,
-      color: PANEL_BG,
-      strokeColor: NEON_PINK,
-    },
-    {
-      id: 'mid_gantry_right',
-      x: 8.0,
-      y: 2.8,
-      w: 5.5,
-      h: 0.45,
-      color: PANEL_BG,
-      strokeColor: NEON_PINK,
-    },
-    // Upper gantry bridge
-    {
-      id: 'upper_bridge',
+      id: 'foundry_main_floor',
       x: 0,
-      y: -0.5,
-      w: 7.0,
-      h: 0.45,
+      y: 5.5,
+      w: 26.0,
+      h: 0.8,
       color: PANEL_BG,
       strokeColor: NEON_CYAN,
     },
-    // High snipers' perches
+
+    // ── Ring Bumpers / Boundaries ───────────────────────────────────────────
     {
-      id: 'perch_left',
-      x: -12.5,
-      y: -3.0,
-      w: 3.5,
-      h: 0.4,
-      color: PANEL_BG,
-      strokeColor: NEON_CYAN,
-    },
-    {
-      id: 'perch_right',
-      x: 12.5,
-      y: -3.0,
-      w: 3.5,
-      h: 0.4,
-      color: PANEL_BG,
-      strokeColor: NEON_CYAN,
-    },
-  ],
-  movingPlatforms: [
-    {
-      id: 'vertical_crane_lift',
-      x: 0,
-      y: 4.0,
-      w: 3.6,
-      h: 0.4,
-      waypoints: [
-        { x: 0, y: 5.5 },
-        { x: 0, y: 1.5 },
-      ],
-      speed: 2.2,
+      id: 'bumper_left',
+      x: -13.0,
+      y: 4.2,
+      w: 0.6,
+      h: 2.0,
       color: 0x1a1a38,
+      strokeColor: NEON_PINK,
+    },
+    {
+      id: 'bumper_right',
+      x: 13.0,
+      y: 4.2,
+      w: 0.6,
+      h: 2.0,
+      color: 0x1a1a38,
+      strokeColor: NEON_PINK,
+    },
+
+    // ── Ground Obstacles & Hurdles ───────────────────────────────────────────
+    // Low hurdle left
+    {
+      id: 'obs_hurdle_left',
+      x: -8.2,
+      y: 4.8,
+      w: 1.2,
+      h: 0.65,
+      color: 0x161633,
+      strokeColor: NEON_CYAN,
+    },
+    // Heavy crate left
+    {
+      id: 'obs_crate_left',
+      x: -4.5,
+      y: 4.5,
+      w: 1.5,
+      h: 1.2,
+      color: 0x1e1e3e,
+      strokeColor: NEON_PINK,
+    },
+    // Center barrier hurdle
+    {
+      id: 'obs_center_barrier',
+      x: 0,
+      y: 4.5,
+      w: 1.8,
+      h: 1.2,
+      color: 0x161633,
+      strokeColor: NEON_CYAN,
+    },
+    // Heavy crate right
+    {
+      id: 'obs_crate_right',
+      x: 4.5,
+      y: 4.5,
+      w: 1.5,
+      h: 1.2,
+      color: 0x1e1e3e,
+      strokeColor: NEON_PINK,
+    },
+    // Low hurdle right
+    {
+      id: 'obs_hurdle_right',
+      x: 8.2,
+      y: 4.8,
+      w: 1.2,
+      h: 0.65,
+      color: 0x161633,
+      strokeColor: NEON_CYAN,
+    },
+    // Low tactical vault ledge above center
+    {
+      id: 'low_center_vault',
+      x: 0,
+      y: 2.8,
+      w: 3.6,
+      h: 0.35,
+      color: PANEL_BG,
+      strokeColor: NEON_PINK,
     },
   ],
   conveyors: [
-    // Lower left conveyor pushing toward center
     {
-      id: 'conveyor_lower_left',
-      x: -3.0,
-      y: 8.1,
-      w: 5.0,
-      h: 0.4,
-      speed: 4.2,
+      id: 'conveyor_left',
+      x: -6.2,
+      y: 5.4,
+      w: 2.2,
+      h: 0.2,
+      speed: 3.2,
     },
-    // Lower right conveyor pushing toward center
     {
-      id: 'conveyor_lower_right',
-      x: 3.0,
-      y: 8.1,
-      w: 5.0,
-      h: 0.4,
-      speed: -4.2,
+      id: 'conveyor_right',
+      x: 6.2,
+      y: 5.4,
+      w: 2.2,
+      h: 0.2,
+      speed: -3.2,
     },
   ],
   laserGates: [
-    // Center laser gate cutting off middle passage every 4s
     {
-      id: 'laser_center_vertical',
+      id: 'laser_center_hurdle',
       x: 0,
-      y: 6.0,
-      w: 0.35,
-      h: 3.8,
+      y: 3.4,
+      w: 0.3,
+      h: 1.0,
       periodSec: LASER_GATE_PERIOD_SEC,
       activeSec: LASER_GATE_ACTIVE_SEC,
       telegraphSec: LASER_GATE_TELEGRAPH_SEC,
-    },
-    // Top laser gate sweeping across upper bridge
-    {
-      id: 'laser_upper_horizontal',
-      x: 0,
-      y: -0.85,
-      w: 6.8,
-      h: 0.3,
-      periodSec: LASER_GATE_PERIOD_SEC,
-      activeSec: 1.8,
-      telegraphSec: LASER_GATE_TELEGRAPH_SEC,
-    },
-  ],
-  jumpPads: [
-    // Bottom left pad launching to upper left perch
-    {
-      id: 'jump_pad_bl',
-      x: -12.5,
-      y: 7.8,
-      w: 1.8,
-      h: 0.35,
-      impulse: { x: 3.5, y: -17.5 },
-      color: NEON_CYAN,
-    },
-    // Bottom right pad launching to upper right perch
-    {
-      id: 'jump_pad_br',
-      x: 12.5,
-      y: 7.8,
-      w: 1.8,
-      h: 0.35,
-      impulse: { x: -3.5, y: -17.5 },
-      color: NEON_CYAN,
-    },
-  ],
-  hazardZones: [
-    {
-      id: 'lower_smelter_pit',
-      x: 0,
-      y: 9.8,
-      w: 32,
-      h: 2.0,
-      type: 'lava',
-      respawnTarget: { x: 0, y: -0.2 },
     },
   ],
 };

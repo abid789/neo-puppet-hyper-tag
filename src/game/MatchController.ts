@@ -186,7 +186,7 @@ export class MatchController {
     const spawns = this._mapManager.currentMap.spawns;
     for (let i = 0; i < this._puppets.length; i++) {
       const p = this._puppets[i];
-      const sp = spawns[i % spawns.length] ?? { x: -4 + i * 2.5, y: -2.0 };
+      const sp = spawns[i % spawns.length] ?? { x: -4 + i * 2.5, y: 4.7 };
       p.teleport(sp.x, sp.y);
       p.resetElimination();
       p.resetMatchState();
@@ -260,7 +260,7 @@ export class MatchController {
           const p = this._puppets[i];
           if (p.isEliminated()) continue;
           const pos = p.getWorldPosition();
-          if (pos.y > 9.2 || Math.abs(pos.x) > 16.5) {
+          if (pos.y > 8.5 || Math.abs(pos.x) > 16.0) {
             p.eliminate();
             this._camera.shake(12, 0, 1);
             this._camera.zoomPunch(0.18);

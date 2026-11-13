@@ -223,9 +223,9 @@ export class PuppetBotController {
         this._currentInput.moveRight = flipChance;
       }
 
-      // Vertical jump to reach higher targets or clear obstacles
-      const jumpJitter = (Math.random() - 0.5) * 0.2;
-      if (dy < -0.6 || (this._hasObstacleAhead(myPos, dx > 0) && Math.random() < (this._config.jumpFrequency + jumpJitter))) {
+      // ONLY jump if an obstacle directly obstructs the horizontal chase
+      const goingRight = dx > 0;
+      if (this._hasObstacleAhead(myPos, goingRight) && this._puppet.isGrounded()) {
         this._currentInput.jump = true;
       }
 
@@ -251,7 +251,6 @@ export class PuppetBotController {
       // ── SURVIVOR BEHAVIOR: Kite away from IT, collect power-ups, seek high ground
       const itPlayer = opponents.find(p => p.isIt()) ?? opponents[0];
       const itPos = itPlayer.getWorldPosition();
-      const itVel = itPlayer.getLinvel();
 
       const dxToIt = itPos.x - myPos.x;
       const dyToIt = itPos.y - myPos.y;
@@ -284,14 +283,9 @@ export class PuppetBotController {
         this._currentInput.dash = true;
       }
 
-      // 3. Jump over incoming lunges, obstacles, or platforms
-      const jumpDistThresh = this._personality === 'Aggressive' ? 2.8 : 2.2;
-      if (
-        (distToIt < jumpDistThresh && itVel.y < 0) ||
-        this._hasObstacleAhead(myPos, !this._currentInput.moveRight) ||
-        (myPos.y > -1.0 && Math.random() < this._config.jumpFrequency * 0.7) ||
-        (this._personality === 'Random' && Math.random() < 0.22)
-      ) {
+      // 3. ONLY jump if an obstacle directly obstructs the escape path
+      const escapingRight = this._currentInput.moveRight;
+      if (this._hasObstacleAhead(myPos, escapingRight) && this._puppet.isGrounded()) {
         this._currentInput.jump = true;
       }
 
@@ -312,15 +306,15 @@ export class PuppetBotController {
   }
 
   private _hasObstacleAhead(pos: Vec2, goingRight: boolean): boolean {
-    // Simple geometric obstacle check against arena borders or obstacles ahead
-    if (goingRight ? pos.x > 13.5 : pos.x < -13.5) return true;
-    return this._physWorld.castRay(pos, { x: goingRight ? 1 : -1, y: 0 }, 1.2);
+    if (goingRight ? pos.x > 12.0 : pos.x < -12.0) return false;
+    const rayOrigin = { x: pos.x + (goingRight ? 0.35 : -0.35), y: pos.y };
+    const rayDir = { x: goingRight ? 1 : -1, y: 0 };
+    return this._physWorld.castRay(rayOrigin, rayDir, 1.1);
   }
 
   private _avoidLavaAndPits(pos: Vec2, _vel: Vec2): void {
-    // If falling near bottom hazard pit, attempt emergency jump earlier for Cautious bots
-    const dangerThreshold = this._personality === 'Cautious' ? 6.2 : 7.2;
-    if (pos.y > dangerThreshold) {
+    // Only emergency jump if falling off the arena floor into the pit (y > 7.5)
+    if (pos.y > 7.5) {
       this._currentInput.jump = true;
       if (Math.random() < 0.6) {
         this._currentInput.dash = true;
@@ -328,10 +322,10 @@ export class PuppetBotController {
     }
 
     // Keep away from map extremities
-    if (pos.x < -14.0) {
+    if (pos.x < -12.5) {
       this._currentInput.moveRight = true;
       this._currentInput.moveLeft = false;
-    } else if (pos.x > 14.0) {
+    } else if (pos.x > 12.5) {
       this._currentInput.moveLeft = true;
       this._currentInput.moveRight = false;
     }

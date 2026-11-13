@@ -1,221 +1,145 @@
 // src/maps/arenas/DesertSandstormMap.ts
-// Sand-dune arena with a dusty orange and gold palette.
-// Features periodic sandstorm gusts pushing puppets sideways, floating sandstone pillars,
-// and quicksand patches that slow movement.
+// Desert Sandstorm Ruins: Flat desert brawler ground with ancient sandstone hurdles and weathered dune crates.
 
 import type { MapDefinition } from '../MapTypes';
-import {
-  QUICKSAND_SLOW_FACTOR,
-  JUMP_PAD_THERMAL_IMPULSE_LEFT,
-  JUMP_PAD_THERMAL_IMPULSE_RIGHT,
-  WIND_GUST_SANDSTORM_FORCE,
-} from '../../config/constants';
+import { PANEL_BG } from '../../types';
 
 export const DesertSandstormMap: MapDefinition = {
   id: 'desert_sandstorm',
-  name: 'DESERT SANDSTORM',
-  subtitle: 'Anbar Wastelands // Sector Dune-04',
+  name: 'DESERT SANDSTORM RUINS',
+  subtitle: 'Flat Desert Brawler // Sandstone Hurdles',
   bounds: {
     minX: -16,
     maxX:  16,
-    minY: -7,
-    maxY:  10,
+    minY: -4,
+    maxY:  9,
   },
   palette: {
-    primary:    0xffaa00, // Solar amber gold
-    secondary:  0x2e1a0b, // Sunbaked sandstone
-    accent:     0xff5500, // Thermal flare
-    danger:     0xff2200, // Quicksand hazard warning
-    background: 0x120a04, // Deep desert horizon
+    primary:    0xffaa00,
+    secondary:  PANEL_BG,
+    accent:     0xff5500,
+    danger:     0xcc3300,
+    background: 0x140a04,
   },
   parallax: [
     {
       kind: 'desert_dunes',
-      depth: 0.16,
-      color: 0x3d200d,
-      alpha: 0.65,
+      depth: 0.15,
+      color: 0x241105,
+      alpha: 0.7,
     },
     {
       kind: 'desert_dunes',
       depth: 0.35,
-      color: 0xffaa00,
-      alpha: 0.18,
+      color: 0x54260a,
+      alpha: 0.2,
     },
   ],
   weather: {
     kind: 'sandstorm',
-    density: 60,
-    speed: { x: 85, y: 12 },
+    density: 45,
+    speed: { x: -45, y: -8 },
     color: 0xffbb44,
     size: 2.5,
     alpha: 0.7,
   },
   spawns: [
-    { x: -8.0, y: 3.8 },
-    { x:  8.0, y: 3.8 },
-    { x: -3.5, y: -0.5 },
-    { x:  3.5, y: -0.5 },
+    { x: -6.5, y: 4.7 },
+    { x:  6.5, y: 4.7 },
+    { x: -2.0, y: 4.7 },
+    { x:  2.0, y: 4.7 },
   ],
   powerUpNodes: [
-    { x:   0, y: -3.5 },
-    { x:  -7, y:  0.2 },
-    { x:   7, y:  0.2 },
+    { x: -4.5, y: 3.4 },
+    { x:  4.5, y: 3.4 },
+    { x:  0.0, y: 2.2 },
   ],
   staticPlatforms: [
-    // Base dune ground left
+    // ── Continuous Main Flat Desert Floor ───────────────────────────────────
     {
-      id: 'dune_floor_left',
-      x: -9.0,
-      y: 8.2,
-      w: 8.5,
-      h: 0.7,
-      color: 0x2e1a0b,
-      strokeColor: 0xffaa00,
-    },
-    // Base dune ground right
-    {
-      id: 'dune_floor_right',
-      x: 9.0,
-      y: 8.2,
-      w: 8.5,
-      h: 0.7,
-      color: 0x2e1a0b,
-      strokeColor: 0xffaa00,
-    },
-    // Central ancient shrine dais
-    {
-      id: 'ancient_shrine_dais',
+      id: 'desert_main_floor',
       x: 0,
-      y: 7.0,
-      w: 5.5,
-      h: 0.5,
-      color: 0x382210,
+      y: 5.5,
+      w: 26.0,
+      h: 0.8,
+      color: 0x2e1a0b,
       strokeColor: 0xffaa00,
     },
-    // Floating stone pillars
+
+    // ── Ring Bumpers / Boundaries ───────────────────────────────────────────
     {
-      id: 'pillar_mid_left',
-      x: -7.5,
-      y: 2.2,
-      w: 4.2,
-      h: 0.45,
-      color: 0x2e1a0b,
+      id: 'bumper_left',
+      x: -13.0,
+      y: 4.2,
+      w: 0.6,
+      h: 2.0,
+      color: 0x382210,
       strokeColor: 0xff5500,
     },
     {
-      id: 'pillar_mid_right',
-      x: 7.5,
-      y: 2.2,
-      w: 4.2,
-      h: 0.45,
-      color: 0x2e1a0b,
+      id: 'bumper_right',
+      x: 13.0,
+      y: 4.2,
+      w: 0.6,
+      h: 2.0,
+      color: 0x382210,
       strokeColor: 0xff5500,
     },
-    // High sky pillar platform
+
+    // ── Ground Obstacles & Hurdles ───────────────────────────────────────────
     {
-      id: 'high_sky_pillar',
-      x: 0,
-      y: -2.2,
-      w: 5.0,
-      h: 0.45,
+      id: 'obs_sandstone_left',
+      x: -8.0,
+      y: 4.8,
+      w: 1.2,
+      h: 0.65,
       color: 0x382210,
       strokeColor: 0xffaa00,
     },
-    // Flanking outpost towers
     {
-      id: 'outpost_tower_left',
-      x: -12.5,
-      y: -0.5,
-      w: 3.5,
-      h: 0.4,
-      color: 0x2e1a0b,
-      strokeColor: 0xffaa00,
-    },
-    {
-      id: 'outpost_tower_right',
-      x: 12.5,
-      y: -0.5,
-      w: 3.5,
-      h: 0.4,
-      color: 0x2e1a0b,
-      strokeColor: 0xffaa00,
-    },
-  ],
-  movingPlatforms: [
-    // Floating obelisk that drifts horizontally across the upper gorge
-    {
-      id: 'floating_obelisk',
-      x: 0,
-      y: 0.2,
-      w: 4.0,
-      h: 0.4,
-      waypoints: [
-        { x: -3.5, y: 0.2 },
-        { x:  3.5, y: 0.2 },
-      ],
-      speed: 1.8,
+      id: 'obs_crate_left',
+      x: -4.5,
+      y: 4.5,
+      w: 1.5,
+      h: 1.2,
       color: 0x472a14,
-    },
-  ],
-  windGusts: {
-    intervalSec: 11.0,
-    warningSec: 2.5,
-    durationSec: 3.8,
-    force: WIND_GUST_SANDSTORM_FORCE, // Sandstorm gust sweep
-  },
-  slowZones: [
-    // Quicksand patch on left desert floor
-    {
-      id: 'quicksand_left',
-      x: -4.0,
-      y: 7.8,
-      w: 3.2,
-      h: 1.8,
-      factor: QUICKSAND_SLOW_FACTOR,
-      color: 0xcc8800,
-    },
-    // Quicksand patch on right desert floor
-    {
-      id: 'quicksand_right',
-      x: 4.0,
-      y: 7.8,
-      w: 3.2,
-      h: 1.8,
-      factor: QUICKSAND_SLOW_FACTOR,
-      color: 0xcc8800,
-    },
-  ],
-  jumpPads: [
-    // Thermal sand updraft vents
-    {
-      id: 'thermal_updraft_left',
-      x: -11.5,
-      y: 7.8,
-      w: 2.0,
-      h: 0.3,
-      impulse: JUMP_PAD_THERMAL_IMPULSE_LEFT,
-      color: 0xffaa00,
+      strokeColor: 0xff5500,
     },
     {
-      id: 'thermal_updraft_right',
-      x: 11.5,
-      y: 7.8,
-      w: 2.0,
-      h: 0.3,
-      impulse: JUMP_PAD_THERMAL_IMPULSE_RIGHT,
-      color: 0xffaa00,
-    },
-  ],
-  hazardZones: [
-    // Bottom abyss fall zone
-    {
-      id: 'dune_chasm',
+      id: 'obs_shrine_center',
       x: 0,
-      y: 9.4,
-      w: 30,
-      h: 1.5,
-      type: 'void',
-      respawnTarget: { x: 0, y: 4.0 },
+      y: 4.5,
+      w: 1.8,
+      h: 1.2,
+      color: 0x382210,
+      strokeColor: 0xffaa00,
+    },
+    {
+      id: 'obs_crate_right',
+      x: 4.5,
+      y: 4.5,
+      w: 1.5,
+      h: 1.2,
+      color: 0x472a14,
+      strokeColor: 0xff5500,
+    },
+    {
+      id: 'obs_sandstone_right',
+      x: 8.0,
+      y: 4.8,
+      w: 1.2,
+      h: 0.65,
+      color: 0x382210,
+      strokeColor: 0xffaa00,
+    },
+    {
+      id: 'low_desert_vault',
+      x: 0,
+      y: 2.8,
+      w: 3.6,
+      h: 0.35,
+      color: PANEL_BG,
+      strokeColor: 0xffaa00,
     },
   ],
 };

@@ -571,10 +571,15 @@ export class Puppet implements ITrackedEntity {
       this._emitDashTrail();
     }
 
-    // 10. Backflip check (air reverse or trigger)
+    // 10. Backflip check (only on intentional mid-air direction reversal)
+    const airReverse =
+      (this._facingRight && this._input.moveLeft) ||
+      (!this._facingRight && this._input.moveRight);
+
     if (
       !this._grounded &&
       this._input.jump &&
+      airReverse &&
       this._jumpCooldown <= 0 &&
       this._backflipTimer <= 0
     ) {
@@ -872,6 +877,10 @@ export class Puppet implements ITrackedEntity {
 
   public isAirborne(): boolean {
     return !this._grounded;
+  }
+
+  public isGrounded(): boolean {
+    return this._grounded;
   }
 
   public resetMatchState(): void {

@@ -66,15 +66,15 @@ export const LOW_GRAVITY_DOME_SCALE = 0.35;
 
 // ── Puppet Fighter Movement & Snappy Locomotion ──────────────────────────────
 // Snappy horizontal run target speed in metres/sec (quick responsive strides)
-export const FIGHTER_RUN_SPEED = 6.4;
+export const FIGHTER_RUN_SPEED = 6.8;
 // Snappy horizontal acceleration impulse multiplier (zero input latency feel)
-export const FIGHTER_ACCEL_IMPULSE_FACTOR = 0.62;
-// Crisp high-velocity vertical jump impulse (short, punchy jump arc)
-export const FIGHTER_JUMP_IMPULSE = -12.8;
+export const FIGHTER_ACCEL_IMPULSE_FACTOR = 0.65;
+// Crisp grounded athletic hurdle hop impulse (clears crates and obstacles smoothly)
+export const FIGHTER_JUMP_IMPULSE = -7.8;
 // Quick landing recovery time in seconds before full speed locomotion resumes
 export const FIGHTER_LANDING_RECOVERY_SEC = 0.08;
 // Variable jump upward sustain lift impulse multiplier while holding jump button
-export const FIGHTER_JUMP_SUSTAIN_IMPULSE = -5.5;
+export const FIGHTER_JUMP_SUSTAIN_IMPULSE = -2.0;
 
 // ── Punch & Fight Hit Mechanics ──────────────────────────────────────────────
 // Punch wind-up telegraph duration in seconds before active hit frames engage
