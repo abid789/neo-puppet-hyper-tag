@@ -59,6 +59,9 @@ const STATE_TO_ENUM: Record<PuppetState, number> = {
   backflipping: 5,
   tagged:       6,
   celebrating:  7,
+  punching:     8,
+  blocking:     9,
+  staggered:    10,
 };
 
 const ENUM_TO_STATE: PuppetState[] = [
@@ -70,6 +73,9 @@ const ENUM_TO_STATE: PuppetState[] = [
   'backflipping',
   'tagged',
   'celebrating',
+  'punching',
+  'blocking',
+  'staggered',
 ];
 
 const BYTES_PER_PUPPET = 36;
@@ -223,7 +229,10 @@ export class SnapshotCodec {
     if (inputPacket.input.moveRight) bits |= (1 << 1);
     if (inputPacket.input.jump)      bits |= (1 << 2);
     if (inputPacket.input.dash)      bits |= (1 << 3);
-    if (inputPacket.input.attack)    bits |= (1 << 4);
+    if (inputPacket.input.attack || inputPacket.input.punch) bits |= (1 << 4);
+    if (inputPacket.input.punch)     bits |= (1 << 5);
+    if (inputPacket.input.block)     bits |= (1 << 6);
+    if (inputPacket.input.fastFall)  bits |= (1 << 7);
 
     view.setUint8(offset, bits);
 
@@ -247,12 +256,16 @@ export class SnapshotCodec {
     const clientTime = view.getFloat64(offset, true); offset += 8;
     const bits = view.getUint8(offset);
 
+    const punch = (bits & (1 << 5)) !== 0 || (bits & (1 << 4)) !== 0;
     const input: InputState = {
       moveLeft:  (bits & (1 << 0)) !== 0,
       moveRight: (bits & (1 << 1)) !== 0,
       jump:      (bits & (1 << 2)) !== 0,
       dash:      (bits & (1 << 3)) !== 0,
-      attack:    (bits & (1 << 4)) !== 0,
+      attack:    punch,
+      punch,
+      block:     (bits & (1 << 6)) !== 0,
+      fastFall:  (bits & (1 << 7)) !== 0,
     };
 
     return { playerIndex, sequence, clientTime, input };

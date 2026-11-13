@@ -5,8 +5,10 @@ export interface KeybindConfig {
   moveLeft:  string;
   moveRight: string;
   jump:      string;
+  punch:     string;
+  block:     string;
   dash:      string;
-  attack:    string;
+  attack?:   string; // backwards compatibility synonym for punch
   emote1:    string;
   emote2:    string;
   emote3:    string;
@@ -19,9 +21,11 @@ export interface KeybindConfig {
 export const DEFAULT_KEYBINDS: KeybindConfig = {
   moveLeft:  'KeyA',
   moveRight: 'KeyD',
-  jump:      'KeyW',
+  jump:      'Space',
+  punch:     'KeyJ',
+  block:     'KeyK',
   dash:      'ShiftLeft',
-  attack:    'KeyF',
+  attack:    'KeyJ',
   emote1:    'Digit1',
   emote2:    'Digit2',
   emote3:    'Digit3',
@@ -34,9 +38,11 @@ export const DEFAULT_KEYBINDS: KeybindConfig = {
 export const ACTION_LABELS: Record<keyof KeybindConfig, string> = {
   moveLeft:  'Move Left',
   moveRight: 'Move Right',
-  jump:      'Jump / Double Jump',
+  jump:      'Jump',
+  punch:     'Punch (J / Left Click)',
+  block:     'Block (K / Right Click)',
   dash:      'Air Dash',
-  attack:    'Tag Attack',
+  attack:    'Punch / Tag',
   emote1:    'Emote 1 (😂)',
   emote2:    'Emote 2 (🔥)',
   emote3:    'Emote 3 (👑)',

@@ -16,7 +16,8 @@ export class TouchControls {
   private _btnFastFall: HTMLElement | null = null;
   private _btnJump: HTMLElement | null = null;
   private _btnDash: HTMLElement | null = null;
-  private _btnAttack: HTMLElement | null = null;
+  private _btnPunch: HTMLElement | null = null;
+  private _btnBlock: HTMLElement | null = null;
   private _dashRingCircle: SVGCircleElement | null = null;
 
   // Track active pointer IDs for sliding support
@@ -51,12 +52,18 @@ export class TouchControls {
         </div>
       </div>
 
-      <!-- Right Thumb Zone: Jump, Dash (with Cooldown Ring), Grapple/Tag -->
+      <!-- Right Thumb Zone: Jump, Punch, Block, Dash -->
       <div class="neo-touch-zone neo-touch-zone-right">
-        <!-- Tag / Shove / Grapple Button -->
-        <button id="touch-btn-attack" class="neo-touch-btn neo-touch-btn-action neo-touch-attack" aria-label="Tag Attack">
-          <span class="neo-touch-icon">💥</span>
-          <span class="neo-touch-label">TAG</span>
+        <!-- Block Button (Secondary Shield Slot) -->
+        <button id="touch-btn-block" class="neo-touch-btn neo-touch-btn-small neo-touch-block" aria-label="Block">
+          <span class="neo-touch-icon">🛡️</span>
+          <span class="neo-touch-label">BLOCK</span>
+        </button>
+
+        <!-- Punch / Strike Button (Primary >= 68px) -->
+        <button id="touch-btn-punch" class="neo-touch-btn neo-touch-btn-action neo-touch-punch" aria-label="Punch Strike">
+          <span class="neo-touch-icon">🥊</span>
+          <span class="neo-touch-label">PUNCH</span>
         </button>
 
         <!-- Dash Button with Circular SVG Cooldown Ring -->
@@ -93,7 +100,8 @@ export class TouchControls {
     this._btnFastFall = this._container.querySelector('#touch-btn-fastfall');
     this._btnJump = this._container.querySelector('#touch-btn-jump');
     this._btnDash = this._container.querySelector('#touch-btn-dash');
-    this._btnAttack = this._container.querySelector('#touch-btn-attack');
+    this._btnPunch = this._container.querySelector('#touch-btn-punch');
+    this._btnBlock = this._container.querySelector('#touch-btn-block');
     this._dashRingCircle = this._container.querySelector('#neo-touch-dash-ring');
   }
 
@@ -178,16 +186,24 @@ export class TouchControls {
       this._bindSingleButton(this._btnDash, 'dash');
     }
 
-    // ── Tag Attack / Shove Button ─────────────────────────────────────────────
-    if (this._btnAttack) {
-      this._bindSingleButton(this._btnAttack, 'attack');
+    // ── Punch Button (Primary Attack) ────────────────────────────────────────
+    if (this._btnPunch) {
+      this._bindSingleButton(this._btnPunch, 'punch');
+    }
+
+    // ── Block Button (Shield Defense) ─────────────────────────────────────────
+    if (this._btnBlock) {
+      this._bindSingleButton(this._btnBlock, 'block');
     }
 
     // Prevent default context menu and gestures on controls container
     this._container.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
-  private _bindSingleButton(btn: HTMLElement, action: 'jump' | 'dash' | 'attack' | 'fastFall'): void {
+  private _bindSingleButton(
+    btn: HTMLElement,
+    action: 'jump' | 'dash' | 'attack' | 'fastFall' | 'punch' | 'block',
+  ): void {
     let pointerId: number | null = null;
 
     btn.addEventListener('pointerdown', (e: PointerEvent) => {
@@ -460,20 +476,40 @@ export class TouchControls {
         box-shadow: 0 0 26px rgba(0, 255, 255, 0.7);
       }
 
-      /* Tag / Shove Button */
-      .neo-touch-attack {
+      /* Punch / Strike Button (Primary Action >= 68px) */
+      .neo-touch-punch {
         position: absolute;
         bottom: 8px;
         left: 0;
+        width: 72px;
+        height: 72px;
         border-color: #ff0055;
         color: #ff0055;
         box-shadow: 0 0 16px rgba(255, 0, 85, 0.25);
       }
 
-      .neo-touch-attack.pressed {
+      .neo-touch-punch.pressed {
         border-color: #ff0055;
-        background: rgba(255, 0, 85, 0.3);
-        box-shadow: 0 0 26px rgba(255, 0, 85, 0.65);
+        background: rgba(255, 0, 85, 0.35);
+        box-shadow: 0 0 28px rgba(255, 0, 85, 0.7);
+      }
+
+      /* Block Button (Shield Defense Slot) */
+      .neo-touch-block {
+        position: absolute;
+        bottom: 86px;
+        left: 4px;
+        width: 54px;
+        height: 54px;
+        border-color: #00e5ff;
+        color: #00e5ff;
+        box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
+      }
+
+      .neo-touch-block.pressed {
+        border-color: #00e5ff;
+        background: rgba(0, 229, 255, 0.3);
+        box-shadow: 0 0 22px rgba(0, 229, 255, 0.6);
       }
 
       /* Screen orientation adjustments */

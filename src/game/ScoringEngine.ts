@@ -17,6 +17,10 @@ export interface PlayerMatchStats {
   powerUpsCollected:  number;
   holdTimeSec:        number;
   survivalTimeSec:    number;
+  punchesLanded:      number;
+  punchesBlocked:     number;
+  damageDealt:        number;
+  roundWins:          number;
 }
 
 export interface FloatingScorePopup {
@@ -53,6 +57,10 @@ export class ScoringEngine {
       powerUpsCollected: 0,
       holdTimeSec: 0,
       survivalTimeSec: 0,
+      punchesLanded: 0,
+      punchesBlocked: 0,
+      damageDealt: 0,
+      roundWins: 0,
     });
   }
 
@@ -223,6 +231,46 @@ export class ScoringEngine {
     }
   }
 
+  public recordPunchLanded(
+    attackerIndex: number,
+    _victimIndex: number,
+    damage: number,
+    blocked: boolean,
+    worldX: number,
+    worldY: number,
+  ): void {
+    const stats = this._stats.get(attackerIndex);
+    if (!stats) return;
+
+    if (blocked) {
+      stats.punchesBlocked++;
+      this.spawnFloatingText(worldX * PPM, worldY * PPM - 25, 'BLOCKED!', '#00e5ff');
+    } else {
+      stats.punchesLanded++;
+      stats.damageDealt += damage;
+      const pts = Math.round(15 + damage * 1.5);
+      this.addScore(attackerIndex, pts, 'HIT!', worldX, worldY, '#ff3366');
+    }
+  }
+
+  public recordRoundWin(playerIndex: number): void {
+    const stats = this._stats.get(playerIndex);
+    if (stats) {
+      stats.roundWins++;
+      stats.score += 250;
+    }
+  }
+
+  public getRoundWins(playerIndex: number): number {
+    return this._stats.get(playerIndex)?.roundWins ?? 0;
+  }
+
+  public resetRoundWins(): void {
+    for (const stats of this._stats.values()) {
+      stats.roundWins = 0;
+    }
+  }
+
   public reset(): void {
     for (let i = 0; i < this._popups.length; i++) {
       this._uiLayer.removeChild(this._popups[i].pixiText);
@@ -242,6 +290,10 @@ export class ScoringEngine {
       stats.powerUpsCollected = 0;
       stats.holdTimeSec = 0;
       stats.survivalTimeSec = 0;
+      stats.punchesLanded = 0;
+      stats.punchesBlocked = 0;
+      stats.damageDealt = 0;
+      stats.roundWins = 0;
     }
   }
 

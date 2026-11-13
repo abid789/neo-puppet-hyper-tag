@@ -23,9 +23,10 @@ export class Camera {
   private _dampingC = 0.75; // per-frame velocity damping factor (0–1)
 
   // ── Zoom limits ─────────────────────────────────────────────────────────────
-  private _minZoom    = 0.5;
-  private _maxZoom    = 1.4;
-  private _zoomSpread = 12; // metres; at this spread zoom hits minimum
+  private _minZoom    = 0.75;
+  private _maxZoom    = 1.45;
+  private _zoomSpread = 8.5; // metres; at this spread zoom hits minimum
+  private _zoomOffset = 0;
 
   // ── Screen shake ────────────────────────────────────────────────────────────
   private _shakeMag   = 0;
@@ -89,10 +90,13 @@ export class Camera {
 
     // ── Set spring targets ──────────────────────────────────────────────────
     this._targetX    = centroidX;
-    this._targetY    = centroidY - 2; // look slightly upward / ahead
+    this._targetY    = centroidY - 1.2; // look slightly upward / ahead
 
     const spread      = maxDist;
-    this._targetZoom  = clamp(1.0 - spread / this._zoomSpread, this._minZoom, this._maxZoom);
+    this._targetZoom  = clamp(1.45 - (spread / this._zoomSpread) * 0.7, this._minZoom, this._maxZoom);
+
+    // Zoom punch offset exponential decay
+    this._zoomOffset *= Math.exp(-12 * dt);
 
     // ── Semi-implicit Euler spring toward target ────────────────────────────
     // X axis
@@ -105,11 +109,16 @@ export class Camera {
     this._velY *= this._dampingC;
     this._y    += this._velY * dt * 60;
 
-    // ── Smooth zoom ─────────────────────────────────────────────────────────
-    this._zoom = lerp(this._zoom, this._targetZoom, 1 - Math.exp(-4 * dt));
+    // ── Smooth zoom with zoom punch ─────────────────────────────────────────
+    const effectiveTargetZoom = clamp(this._targetZoom + this._zoomOffset, this._minZoom, this._maxZoom + 0.2);
+    this._zoom = lerp(this._zoom, effectiveTargetZoom, 1 - Math.exp(-6 * dt));
 
     // ── Decay shake ─────────────────────────────────────────────────────────
     this._shakeMag *= this._shakeDecay;
+  }
+
+  public zoomPunch(intensity = 0.12): void {
+    this._zoomOffset = Math.min(0.25, this._zoomOffset + intensity);
   }
 
   // ── Apply transform to game container ──────────────────────────────────────

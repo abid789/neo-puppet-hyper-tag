@@ -63,3 +63,75 @@ export const FUNHOUSE_MIRROR_DURATION_SEC = 2.0;
 
 // Zero-G orbital low-gravity dome gravity scale factor (35% normal gravity)
 export const LOW_GRAVITY_DOME_SCALE = 0.35;
+
+// ── Puppet Fighter Movement & Snappy Locomotion ──────────────────────────────
+// Snappy horizontal run target speed in metres/sec (quick responsive strides)
+export const FIGHTER_RUN_SPEED = 6.4;
+// Snappy horizontal acceleration impulse multiplier (zero input latency feel)
+export const FIGHTER_ACCEL_IMPULSE_FACTOR = 0.62;
+// Crisp high-velocity vertical jump impulse (short, punchy jump arc)
+export const FIGHTER_JUMP_IMPULSE = -12.8;
+// Quick landing recovery time in seconds before full speed locomotion resumes
+export const FIGHTER_LANDING_RECOVERY_SEC = 0.08;
+// Variable jump upward sustain lift impulse multiplier while holding jump button
+export const FIGHTER_JUMP_SUSTAIN_IMPULSE = -5.5;
+
+// ── Punch & Fight Hit Mechanics ──────────────────────────────────────────────
+// Punch wind-up telegraph duration in seconds before active hit frames engage
+export const PUNCH_WINDUP_SEC = 0.08;
+// Active strike collision window in seconds where hits can connect
+export const PUNCH_ACTIVE_SEC = 0.12;
+// Punch follow-through recovery duration in seconds before next action
+export const PUNCH_RECOVERY_SEC = 0.16;
+// Total punch attack cooldown cycle duration in seconds
+export const PUNCH_COOLDOWN_SEC = 0.36;
+// Maximum reach in metres from torso to register an active punch strike
+export const PUNCH_REACH_METRES = 1.15;
+// Base physical damage points added to victim damage meter per solid hit (0 to 100+)
+export const PUNCH_BASE_DAMAGE = 14.0;
+// Base horizontal knockback impulse in Newton-seconds applied on clean hit
+export const PUNCH_BASE_KNOCKBACK = 11.5;
+// Vertical launch pop impulse applied to destabilize victim into tumbling ragdoll
+export const PUNCH_VERTICAL_POP = -4.2;
+// Hit-stun freeze duration in seconds inflicted on victim on unblocked strike
+export const PUNCH_HIT_STUN_SEC = 0.32;
+// Exaggerated rotational torque applied to victim torso to induce funny ragdoll flips
+export const PUNCH_RAGDOLL_TORQUE = 28.0;
+
+// ── Block & Defensive Guard Mechanics ─────────────────────────────────────────
+// Knockback reduction multiplier applied while fighter is actively blocking (75% absorbed)
+export const BLOCK_KNOCKBACK_DAMPING = 0.25;
+// Damage reduction multiplier while blocking (80% damage absorbed)
+export const BLOCK_DAMAGE_DAMPING = 0.20;
+// Perfect block parry timing window in seconds for complete damage negation
+export const BLOCK_PARRY_WINDOW_SEC = 0.12;
+
+// ── Ragdoll Stagger & Damage Scaling ──────────────────────────────────────────
+// Time in seconds for an off-balance ragdoll to self-right its joints after a strike
+export const RAGDOLL_STAGGER_RECOVERY_SEC = 0.58;
+// Maximum damage meter ceiling for HUD display purposes
+export const DAMAGE_METER_MAX = 100.0;
+// Scaling factor: every 50% damage adds +1.0x to the knockback launch velocity
+export const DAMAGE_KNOCKBACK_SCALE_DIVISOR = 48.0;
+
+// ── Body Profiles: Small, Standard, Heavy ────────────────────────────────────
+export interface BodyProfileConfig {
+  // Density multiplier scaling rigid body mass
+  massMultiplier: number;
+  // Locomotion run speed multiplier
+  speedMultiplier: number;
+  // Knockback force received multiplier (higher = flies farther)
+  knockbackReceivedMultiplier: number;
+  // Punch impact impulse multiplier
+  punchPowerMultiplier: number;
+}
+
+// Body profiles hand-tuned for asymmetric party fighter matchups
+export const BODY_PROFILES: Record<'Small' | 'Standard' | 'Heavy', BodyProfileConfig> = {
+  // Agile, light featherweight: high speed, low mass, launches far on hit
+  Small: { massMultiplier: 0.80, speedMultiplier: 1.12, knockbackReceivedMultiplier: 1.25, punchPowerMultiplier: 0.90 },
+  // Balanced standard brawler: baseline mass, velocity, and knockback response
+  Standard: { massMultiplier: 1.00, speedMultiplier: 1.00, knockbackReceivedMultiplier: 1.00, punchPowerMultiplier: 1.00 },
+  // High-inertia heavyweight tank: slower locomotion, resists knockback, crushing punches
+  Heavy: { massMultiplier: 1.35, speedMultiplier: 0.90, knockbackReceivedMultiplier: 0.72, punchPowerMultiplier: 1.20 },
+};

@@ -66,13 +66,24 @@ export interface InputState {
   moveLeft:  boolean;
   moveRight: boolean;
   jump:      boolean;
+  punch:     boolean;
+  block:     boolean;
   dash:      boolean;
-  attack:    boolean;
+  attack?:   boolean; // backward compatible synonym for punch
   fastFall?: boolean;
 }
 
 export function createInputState(): InputState {
-  return { moveLeft: false, moveRight: false, jump: false, dash: false, attack: false, fastFall: false };
+  return {
+    moveLeft: false,
+    moveRight: false,
+    jump: false,
+    punch: false,
+    block: false,
+    dash: false,
+    attack: false,
+    fastFall: false,
+  };
 }
 
 // ── Engine ─────────────────────────────────────────────────────────────────────
@@ -111,13 +122,16 @@ export interface ParticleEmitConfig {
 }
 
 // ── Puppet ─────────────────────────────────────────────────────────────────────
+export type BodyProfile = 'Small' | 'Standard' | 'Heavy';
+
 export interface PuppetConfig {
-  x:             number;   // spawn x, metres
-  y:             number;   // spawn y, metres
-  colorPrimary:  number;
+  x:              number;   // spawn x, metres
+  y:              number;   // spawn y, metres
+  colorPrimary:   number;
   colorSecondary: number;
-  colorVisor:    number;
-  playerIndex:   number;
+  colorVisor:     number;
+  playerIndex:    number;
+  bodyProfile?:   BodyProfile;
 }
 
 export type PuppetState =
@@ -127,6 +141,9 @@ export type PuppetState =
   | 'falling'
   | 'dashing'
   | 'backflipping'
+  | 'punching'
+  | 'blocking'
+  | 'staggered'
   | 'tagged'
   | 'celebrating';
 
@@ -142,24 +159,30 @@ export interface KeyMap {
   moveLeft:  string;
   moveRight: string;
   jump:      string;
+  punch:     string;
+  block:     string;
   dash:      string;
-  attack:    string;
+  attack?:   string;
 }
 
 export const KEYMAP_P1: KeyMap = {
   moveLeft:  'KeyA',
   moveRight: 'KeyD',
-  jump:      'KeyW',
+  jump:      'Space',
+  punch:     'KeyJ',
+  block:     'KeyK',
   dash:      'ShiftLeft',
-  attack:    'KeyF',
+  attack:    'KeyJ',
 };
 
 export const KEYMAP_P2: KeyMap = {
   moveLeft:  'ArrowLeft',
   moveRight: 'ArrowRight',
   jump:      'ArrowUp',
+  punch:     'KeyL',
+  block:     'Semicolon',
   dash:      'ControlRight',
-  attack:    'KeyH',
+  attack:    'KeyL',
 };
 
 // ── Power-Up System ────────────────────────────────────────────────────────────

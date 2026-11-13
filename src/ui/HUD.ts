@@ -148,12 +148,22 @@ export class HUD {
       const customNick = label?.playerId ? rawNicknames[label.playerId] : (rawNicknames[realName] || null);
       const displayName = customNick ? `${customNick} <small style="font-size:9px; color:#888;">(${realName})</small>` : realName;
 
+      const dmg = Math.round(p.getDamage());
+      const roundWins = scoring.getRoundWins(idx);
+      const pips = [0, 1].map(r => r < roundWins ? '<span class="neo-pip filled">●</span>' : '<span class="neo-pip">○</span>').join('');
+      const prof = p.getBodyProfile();
+      const profBadge = prof !== 'Standard' ? `<span class="neo-profile-badge">${prof}</span>` : '';
+
       return `
         <div class="neo-hud-card ${idx === localPlayerIndex ? 'local' : ''}">
           <div class="neo-hud-avatar" style="background:${hexColor}; box-shadow:0 0 10px ${hexColor}"></div>
           <div class="neo-hud-info">
-            <div class="neo-hud-pname">${displayName} ${statusIcon}</div>
+            <div class="neo-hud-pname">${displayName} ${profBadge} ${statusIcon} <span class="neo-hud-pips">${pips}</span></div>
             <div class="neo-hud-score">${score} ${badge}</div>
+            <div class="neo-hud-dmg-row">
+              <div class="neo-hud-dmg-track"><div class="neo-hud-dmg-fill ${dmg > 65 ? 'high' : ''}" style="width: ${dmg}%"></div></div>
+              <span class="neo-hud-dmg-val ${dmg > 65 ? 'high' : ''}">${dmg}%</span>
+            </div>
           </div>
         </div>
       `;
@@ -273,6 +283,33 @@ export class HUD {
       }
       .neo-dash-label {
         font-size: 9px; font-weight: bold; color: #00ffff; letter-spacing: 1px;
+      }
+      .neo-hud-dmg-row {
+        display: flex; align-items: center; gap: 6px; margin-top: 3px;
+      }
+      .neo-hud-dmg-track {
+        width: 70px; height: 5px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden;
+      }
+      .neo-hud-dmg-fill {
+        height: 100%; background: #00ff88; transition: width 0.15s ease-out, background 0.2s;
+      }
+      .neo-hud-dmg-fill.high {
+        background: #ff3300; box-shadow: 0 0 6px #ff3300;
+      }
+      .neo-hud-dmg-val {
+        font-size: 9px; font-weight: bold; color: #00ff88; min-width: 28px;
+      }
+      .neo-hud-dmg-val.high {
+        color: #ff3300; animation: blink 0.5s infinite;
+      }
+      .neo-hud-pips {
+        display: inline-flex; gap: 3px; font-size: 11px; color: #555577; margin-left: 6px;
+      }
+      .neo-pip.filled {
+        color: #ffee00; text-shadow: 0 0 6px #ffee00;
+      }
+      .neo-profile-badge {
+        font-size: 8px; color: #88aacc; background: rgba(255,255,255,0.1); padding: 1px 3px; border-radius: 2px;
       }
     `;
     document.head.appendChild(style);

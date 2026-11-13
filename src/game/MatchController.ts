@@ -48,6 +48,9 @@ export class MatchController {
   // Match configurations
   private _roundDuration = 60.0; // 60, 90, 120, or 180s
   private _roundTimeRemaining = 60.0;
+  private _targetRoundWins = 2; // Best of 3 format: first to 2 round wins
+  private _currentRound = 1;
+  private _roundBreakMessage = '';
 
   // Modes
   private readonly _modes: GameMode[] = [
@@ -155,21 +158,39 @@ export class MatchController {
   }
 
   public startMatch(): void {
+    this._currentRound = 1;
+    this._roundBreakMessage = '';
+    this._roundTimeRemaining = this._roundDuration;
     this._scoring.reset();
+    this._scoring.resetRoundWins();
     this._tagRules.reset();
     this._tagFeed.length = 0;
     MatchRecapManager.getInstance().startNewMatch();
+    this._repositionPuppetsAtSpawns();
     this.currentMode.init(this._puppets);
 
-    this._transitionTo('PRE_MATCH_INTRO', 2.8);
+    this._transitionTo('PRE_MATCH_INTRO', 2.5);
   }
 
   public resetMatch(): void {
+    this._currentRound = 1;
+    this._roundBreakMessage = '';
     this._scoring.reset();
+    this._scoring.resetRoundWins();
     this._tagRules.reset();
     this._tagFeed.length = 0;
+    this._repositionPuppetsAtSpawns();
+  }
+
+  private _repositionPuppetsAtSpawns(): void {
+    const spawns = this._mapManager.currentMap.spawns;
     for (let i = 0; i < this._puppets.length; i++) {
-      this._puppets[i].resetMatchState();
+      const p = this._puppets[i];
+      const sp = spawns[i % spawns.length] ?? { x: -4 + i * 2.5, y: -2.0 };
+      p.teleport(sp.x, sp.y);
+      p.resetElimination();
+      p.resetMatchState();
+      p.resetDamage();
     }
   }
 
@@ -199,12 +220,11 @@ export class MatchController {
 
     switch (this._state) {
       case 'PRE_MATCH_INTRO':
-        // Camera smooth introductory pan
         for (let i = 0; i < this._puppets.length; i++) {
           this._puppets[i].setInputFrozen(true);
         }
         if (this._stateTimer <= 0) {
-          this._transitionTo('COUNTDOWN_3_2_1', 3.0);
+          this._transitionTo('COUNTDOWN_3_2_1', 2.8);
         }
         break;
 
@@ -216,6 +236,7 @@ export class MatchController {
           for (let i = 0; i < this._puppets.length; i++) {
             this._puppets[i].setInputFrozen(false);
           }
+          this._roundBreakMessage = '';
           this._roundTimeRemaining = this._roundDuration;
           this._transitionTo('ACTIVE_ROUND', this._roundDuration);
         }
@@ -231,14 +252,66 @@ export class MatchController {
           this._camera.shake(8, 0, 1);
         }
 
-        // Run active mode logic
+        // 1. Fight mechanics: Check punch hit collisions
+        this._tagRules.checkPunchHits(this._puppets);
+
+        // 2. Ring-out / KO detection
+        for (let i = 0; i < this._puppets.length; i++) {
+          const p = this._puppets[i];
+          if (p.isEliminated()) continue;
+          const pos = p.getWorldPosition();
+          if (pos.y > 9.2 || Math.abs(pos.x) > 16.5) {
+            p.eliminate();
+            this._camera.shake(12, 0, 1);
+            this._camera.zoomPunch(0.18);
+            this.addFeedEntry(`PLAYER ${p.getPlayerIndex() + 1} RING-OUT KO!`, '#ff0033');
+          }
+        }
+
+        // 3. Run active mode logic
         this.currentMode.update(dt, this._puppets, this._tagRules, this._scoring);
 
+        // 4. Check round resolution conditions
+        const activePuppets = this._puppets.filter(p => !p.isEliminated());
+        const ringOutVictory = this._puppets.length >= 2 && activePuppets.length <= 1;
+        const timeExpired = this._roundTimeRemaining <= 0;
         const earlyRoundOver = this.currentMode.isRoundOver?.() ?? false;
 
-        if (this._roundTimeRemaining <= 0 || earlyRoundOver) {
-          this._finalizeMatchRecap();
-          this._transitionTo('ROUND_SUMMARY_PODIUM', 5.5);
+        if (ringOutVictory || timeExpired || earlyRoundOver) {
+          let roundWinnerIdx = 0;
+          if (activePuppets.length === 1) {
+            roundWinnerIdx = activePuppets[0].getPlayerIndex();
+          } else if (activePuppets.length > 1) {
+            // Lowest damage meter wins, tie-break by highest score
+            const sorted = [...activePuppets].sort((a, b) => {
+              const dmgDiff = a.getDamage() - b.getDamage();
+              if (Math.abs(dmgDiff) > 1) return dmgDiff;
+              const sa = this._scoring.getPlayerStats(a.getPlayerIndex())?.score ?? 0;
+              const sb = this._scoring.getPlayerStats(b.getPlayerIndex())?.score ?? 0;
+              return sb - sa;
+            });
+            roundWinnerIdx = sorted[0].getPlayerIndex();
+          } else if (this._puppets.length > 0) {
+            roundWinnerIdx = this._puppets[0].getPlayerIndex();
+          }
+
+          this._scoring.recordRoundWin(roundWinnerIdx);
+          this.addFeedEntry(`ROUND ${this._currentRound} WON BY PLAYER ${roundWinnerIdx + 1}!`, '#00ff88');
+
+          const wins = this._scoring.getRoundWins(roundWinnerIdx);
+          if (wins >= this._targetRoundWins) {
+            // Best of 3 decided! First to 2 round wins takes the match
+            this._finalizeMatchRecap();
+            this._transitionTo('ROUND_SUMMARY_PODIUM', 5.5);
+          } else {
+            // Inter-round reset & transition to next round
+            this._currentRound++;
+            this._roundBreakMessage = `ROUND ${this._currentRound - 1} WINNER: PLAYER ${roundWinnerIdx + 1}!\nROUND ${this._currentRound} OF 3`;
+            this._repositionPuppetsAtSpawns();
+            this._scoring.setDoublePoints(false);
+            this._roundTimeRemaining = this._roundDuration;
+            this._transitionTo('COUNTDOWN_3_2_1', 3.0);
+          }
         }
         break;
 
@@ -318,15 +391,21 @@ export class MatchController {
       case 'COUNTDOWN_3_2_1':
         this._bannerText.visible = true;
         const count = Math.ceil(this._stateTimer);
-        this._bannerText.text = count > 0 ? `${count}` : 'GO!';
-        this._bannerText.style.fontSize = 54;
-        this._bannerText.style.fill = count === 1 ? '#00ff88' : '#ffee00';
+        if (this._roundBreakMessage && this._stateTimer > 1.2) {
+          this._bannerText.text = this._roundBreakMessage;
+          this._bannerText.style.fontSize = 24;
+          this._bannerText.style.fill = '#00ffff';
+        } else {
+          this._bannerText.text = count > 0 ? `${count}` : 'FIGHT!';
+          this._bannerText.style.fontSize = 54;
+          this._bannerText.style.fill = count === 1 ? '#00ff88' : '#ffee00';
+        }
         break;
 
       case 'ACTIVE_ROUND':
         if (this._roundTimeRemaining > this._roundDuration - 1.5) {
           this._bannerText.visible = true;
-          this._bannerText.text = 'GO!';
+          this._bannerText.text = 'FIGHT!';
           this._bannerText.style.fontSize = 48;
           this._bannerText.style.fill = '#00ff88';
         } else if (this._roundTimeRemaining <= 15.0 && this._roundTimeRemaining > 12.5) {

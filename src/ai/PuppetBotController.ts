@@ -234,9 +234,18 @@ export class PuppetBotController {
         this._currentInput.dash = true;
       }
 
-      // Attack if very close
-      if (dist <= 1.2) {
+      // Punch when within reach
+      if (dist <= 1.25) {
+        this._currentInput.punch = true;
         this._currentInput.attack = true;
+      }
+
+      // Tactical Block if opponent is close and punching/dashing
+      if (dist <= 1.6 && (opp.isPunching() || opp.isDashing())) {
+        const blockProb = this._config.difficulty === 'Nightmare' ? 0.75 : this._config.difficulty === 'Pro' ? 0.45 : 0.2;
+        if (Math.random() < blockProb) {
+          this._currentInput.block = true;
+        }
       }
     } else {
       // ── SURVIVOR BEHAVIOR: Kite away from IT, collect power-ups, seek high ground
@@ -247,6 +256,18 @@ export class PuppetBotController {
       const dxToIt = itPos.x - myPos.x;
       const dyToIt = itPos.y - myPos.y;
       const distToIt = Math.hypot(dxToIt, dyToIt);
+
+      // Block if pursuer is punching nearby
+      if (distToIt <= 1.5 && (itPlayer.isPunching() || itPlayer.isDashing())) {
+        const blockProb = this._config.difficulty === 'Nightmare' ? 0.7 : this._config.difficulty === 'Pro' ? 0.4 : 0.15;
+        if (Math.random() < blockProb) {
+          this._currentInput.block = true;
+        }
+      } else if (distToIt <= 1.1) {
+        // Counter-punch
+        this._currentInput.punch = true;
+        this._currentInput.attack = true;
+      }
 
       // 1. Run in opposite direction of the hunter
       const flipRun = (this._personality === 'Random' && Math.random() < 0.18);

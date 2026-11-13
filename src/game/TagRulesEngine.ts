@@ -28,6 +28,9 @@ export class TagRulesEngine {
   // Cooldown to prevent multi-triggering near-misses on the same pass
   private _nearMissCooldownMap: Map<string, number> = new Map();
 
+  // Cooldown to prevent multi-hits during a single punch active frame
+  private _punchCooldownMap: Map<string, number> = new Map();
+
   constructor(scoring: ScoringEngine, engine: Engine) {
     this._scoring = scoring;
     this._engine = engine;
@@ -49,6 +52,15 @@ export class TagRulesEngine {
         this._nearMissCooldownMap.delete(key);
       } else {
         this._nearMissCooldownMap.set(key, t - dt);
+      }
+    }
+
+    // Decay punch cooldown timers
+    for (const [key, t] of this._punchCooldownMap.entries()) {
+      if (t <= dt) {
+        this._punchCooldownMap.delete(key);
+      } else {
+        this._punchCooldownMap.set(key, t - dt);
       }
     }
   }
@@ -143,8 +155,52 @@ export class TagRulesEngine {
     };
   }
 
+  public checkPunchHits(puppets: Puppet[]): void {
+    const len = puppets.length;
+    for (let i = 0; i < len; i++) {
+      const attacker = puppets[i];
+      if (attacker.isEliminated() || !attacker.isPunchActive()) continue;
+
+      const aIdx = attacker.getPlayerIndex();
+      const aPos = attacker.getWorldPosition();
+
+      for (let j = 0; j < len; j++) {
+        if (i === j) continue;
+        const victim = puppets[j];
+        if (victim.isEliminated()) continue;
+
+        const vIdx = victim.getPlayerIndex();
+        const pairKey = `${aIdx}_${vIdx}`;
+        if (this._punchCooldownMap.has(pairKey)) continue;
+
+        const vPos = victim.getWorldPosition();
+        const dx = vPos.x - aPos.x;
+        const dy = vPos.y - aPos.y;
+        const dist = Math.hypot(dx, dy);
+
+        // Punch reach is 1.15m and vertical elevation within 1.0m
+        if (dist <= 1.15 && Math.abs(dy) <= 1.0) {
+          this._punchCooldownMap.set(pairKey, 0.32);
+
+          const hitResult = victim.takePunchHit(aPos);
+          this._engine.hitStop(50);
+
+          this._scoring.recordPunchLanded(
+            aIdx,
+            vIdx,
+            hitResult.damage,
+            hitResult.blocked,
+            vPos.x,
+            vPos.y,
+          );
+        }
+      }
+    }
+  }
+
   public reset(): void {
     this._reTagImmunityMap.clear();
     this._nearMissCooldownMap.clear();
+    this._punchCooldownMap.clear();
   }
 }

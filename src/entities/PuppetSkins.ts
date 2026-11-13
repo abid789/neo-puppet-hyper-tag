@@ -151,6 +151,9 @@ export class PuppetSkin {
     bombTimer: number | null = null,
     isIt = false,
     isStunned = false,
+    isPunching = false,
+    isBlocking = false,
+    isStaggered = false,
   ): void {
     // Apply transforms (metres → pixels)
     this._applyTransform(this._cHead,      transforms.head);
@@ -271,6 +274,34 @@ export class PuppetSkin {
         const sx = hx + Math.cos(starAngle) * 16;
         const sy = hy - 10 + Math.sin(starAngle) * 6;
         this._modeGfx.circle(sx, sy, 2.5).fill({ color: 0xffee00, alpha: 0.9 });
+      }
+    }
+
+    // 6. Block Defensive Energy Barrier
+    if (isBlocking) {
+      const shieldOffset = facingRight ? 18 : -18;
+      this._modeGfx
+        .roundRect(tx + shieldOffset - 4, ty - 18, 8, 36, 4)
+        .fill({ color: 0x00ffff, alpha: 0.65 })
+        .stroke({ color: 0xffffff, width: 2, alpha: 0.9 });
+    }
+
+    // 7. Punch Energy Fist / Strike Burst
+    if (isPunching) {
+      const fistOffset = facingRight ? 24 : -24;
+      this._modeGfx
+        .circle(tx + fistOffset, ty - 2, 7)
+        .fill({ color: 0xff0066, alpha: 0.9 })
+        .stroke({ color: 0xffffff, width: 1.5 });
+    }
+
+    // 8. Stagger Dizzy / Stumble Stars
+    if (isStaggered && !isStunned) {
+      for (let s = 0; s < 2; s++) {
+        const starAngle = this._shieldPulse * 4 + s * Math.PI;
+        const sx = hx + Math.cos(starAngle) * 14;
+        const sy = hy - 14 + Math.sin(starAngle) * 5;
+        this._modeGfx.circle(sx, sy, 2.0).fill({ color: 0xffaadd, alpha: 0.85 });
       }
     }
 

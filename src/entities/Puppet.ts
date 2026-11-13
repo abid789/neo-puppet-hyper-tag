@@ -21,10 +21,33 @@ import type {
   KeyMap,
   PowerUpType,
   ActivePowerUp,
+  BodyProfile,
 } from '../types';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import { PuppetSkin, type PuppetLimbTransforms } from './PuppetSkins';
 import type { ParticleSystem } from '../graphics/Particles';
+import {
+  BODY_PROFILES,
+  FIGHTER_RUN_SPEED,
+  FIGHTER_ACCEL_IMPULSE_FACTOR,
+  FIGHTER_JUMP_IMPULSE,
+  FIGHTER_LANDING_RECOVERY_SEC,
+  FIGHTER_JUMP_SUSTAIN_IMPULSE,
+  PUNCH_WINDUP_SEC,
+  PUNCH_ACTIVE_SEC,
+  PUNCH_RECOVERY_SEC,
+  PUNCH_COOLDOWN_SEC,
+  PUNCH_BASE_DAMAGE,
+  PUNCH_BASE_KNOCKBACK,
+  PUNCH_VERTICAL_POP,
+  PUNCH_HIT_STUN_SEC,
+  PUNCH_RAGDOLL_TORQUE,
+  BLOCK_KNOCKBACK_DAMPING,
+  BLOCK_DAMAGE_DAMPING,
+  RAGDOLL_STAGGER_RECOVERY_SEC,
+  DAMAGE_KNOCKBACK_SCALE_DIVISOR,
+} from '../config/constants';
+import { InputManager } from '../core/InputManager';
 
 // Puppet physics dimensions in metres
 const HEAD_R = 0.22;
@@ -96,6 +119,17 @@ export class Puppet implements ITrackedEntity {
   private _invertControlsTimer = 0;
   private _isEliminated = false;
 
+  // ── Style Overhaul: Fight Mechanics, Damage & Ragdoll Fields ───────────────
+  private _bodyProfile: BodyProfile = 'Standard';
+  private _damage = 0;
+  private _punchCooldown = 0;
+  private _punchTimer = 0;
+  private _punchState: 'idle' | 'windup' | 'active' | 'recovery' = 'idle';
+  private _isBlocking = false;
+  private _staggerTimer = 0;
+  private _landingRecoveryTimer = 0;
+  private _wasAirborne = false;
+
   private readonly _keyMap: KeyMap;
   private readonly _keysDown: Set<string> = new Set();
 
@@ -108,13 +142,14 @@ export class Puppet implements ITrackedEntity {
     this._physWorld = physWorld;
     this._particles = particles;
     this._cfg = cfg;
+    this._bodyProfile = cfg.bodyProfile ?? 'Standard';
 
     this._keyMap = cfg.playerIndex === 0 ? KEYMAP_P1 : KEYMAP_P2;
 
     window.addEventListener('keydown', this._onKeyDown);
     window.addEventListener('keyup', this._onKeyUp);
 
-    // Build ragdoll rigidbodies and joints
+    // Build ragdoll rigidbodies and joints with body profile density
     this._bodies = this._build(cfg.x, cfg.y);
 
     // Initialize transform history pairs
@@ -147,40 +182,41 @@ export class Puppet implements ITrackedEntity {
 
   private _build(x: number, y: number): PuppetBodies {
     const pw = this._physWorld;
+    const massMult = BODY_PROFILES[this._bodyProfile].massMultiplier;
 
     // 1. Torso (core root body)
-    const torso = pw.createDynamicBody(x, y, 0.45, 2.5);
-    pw.addCapsuleCollider(torso, TORSO_HH, TORSO_R, 1.2, 0.3);
+    const torso = pw.createDynamicBody(x, y, 0.45 * massMult, 2.5);
+    pw.addCapsuleCollider(torso, TORSO_HH, TORSO_R, 1.2 * massMult, 0.3);
 
     // 2. Head
-    const head = pw.createDynamicBody(x, y - 0.55, 0.55, 3.5);
-    pw.addBallCollider(head, HEAD_R, 0.8, 0.2);
+    const head = pw.createDynamicBody(x, y - 0.55, 0.55 * massMult, 3.5);
+    pw.addBallCollider(head, HEAD_R, 0.8 * massMult, 0.2);
 
     // 3. Arms (left & right)
-    const upperArmL = pw.createDynamicBody(x - 0.28, y - 0.1, 0.3, 1.5);
-    pw.addCapsuleCollider(upperArmL, ARM_HH, ARM_R, 0.5, 0.2);
+    const upperArmL = pw.createDynamicBody(x - 0.28, y - 0.1, 0.3 * massMult, 1.5);
+    pw.addCapsuleCollider(upperArmL, ARM_HH, ARM_R, 0.5 * massMult, 0.2);
 
-    const lowerArmL = pw.createDynamicBody(x - 0.28, y + 0.28, 0.3, 1.5);
-    pw.addCapsuleCollider(lowerArmL, ARM_HH, ARM_R, 0.4, 0.2);
+    const lowerArmL = pw.createDynamicBody(x - 0.28, y + 0.28, 0.3 * massMult, 1.5);
+    pw.addCapsuleCollider(lowerArmL, ARM_HH, ARM_R, 0.4 * massMult, 0.2);
 
-    const upperArmR = pw.createDynamicBody(x + 0.28, y - 0.1, 0.3, 1.5);
-    pw.addCapsuleCollider(upperArmR, ARM_HH, ARM_R, 0.5, 0.2);
+    const upperArmR = pw.createDynamicBody(x + 0.28, y - 0.1, 0.3 * massMult, 1.5);
+    pw.addCapsuleCollider(upperArmR, ARM_HH, ARM_R, 0.5 * massMult, 0.2);
 
-    const lowerArmR = pw.createDynamicBody(x + 0.28, y + 0.28, 0.3, 1.5);
-    pw.addCapsuleCollider(lowerArmR, ARM_HH, ARM_R, 0.4, 0.2);
+    const lowerArmR = pw.createDynamicBody(x + 0.28, y + 0.28, 0.3 * massMult, 1.5);
+    pw.addCapsuleCollider(lowerArmR, ARM_HH, ARM_R, 0.4 * massMult, 0.2);
 
     // 4. Legs (left & right)
-    const upperLegL = pw.createDynamicBody(x - 0.12, y + 0.42, 0.4, 1.8);
-    pw.addCapsuleCollider(upperLegL, LEG_HH, LEG_R, 0.7, 0.4);
+    const upperLegL = pw.createDynamicBody(x - 0.12, y + 0.42, 0.4 * massMult, 1.8);
+    pw.addCapsuleCollider(upperLegL, LEG_HH, LEG_R, 0.7 * massMult, 0.4);
 
-    const lowerLegL = pw.createDynamicBody(x - 0.12, y + 0.8, 0.4, 1.8);
-    pw.addCapsuleCollider(lowerLegL, LEG_HH, LEG_R, 0.6, 0.6);
+    const lowerLegL = pw.createDynamicBody(x - 0.12, y + 0.8, 0.4 * massMult, 1.8);
+    pw.addCapsuleCollider(lowerLegL, LEG_HH, LEG_R, 0.6 * massMult, 0.6);
 
-    const upperLegR = pw.createDynamicBody(x + 0.12, y + 0.42, 0.4, 1.8);
-    pw.addCapsuleCollider(upperLegR, LEG_HH, LEG_R, 0.7, 0.4);
+    const upperLegR = pw.createDynamicBody(x + 0.12, y + 0.42, 0.4 * massMult, 1.8);
+    pw.addCapsuleCollider(upperLegR, LEG_HH, LEG_R, 0.7 * massMult, 0.4);
 
-    const lowerLegR = pw.createDynamicBody(x + 0.12, y + 0.8, 0.4, 1.8);
-    pw.addCapsuleCollider(lowerLegR, LEG_HH, LEG_R, 0.6, 0.6);
+    const lowerLegR = pw.createDynamicBody(x + 0.12, y + 0.8, 0.4 * massMult, 1.8);
+    pw.addCapsuleCollider(lowerLegR, LEG_HH, LEG_R, 0.6 * massMult, 0.6);
 
     // ── Articulation Joints ──────────────────────────────────────────────────────
     // Neck: Head <-> Torso
@@ -237,30 +273,72 @@ export class Puppet implements ITrackedEntity {
   }
 
   public fixedUpdate(dt: number): void {
-    // 1. Gather input state (human or bot or touch)
+    // 1. Gather input state (human, bot, or touch)
     if (this._isBot) {
-      this._input.moveLeft = this._botInput.moveLeft;
-      this._input.moveRight = this._botInput.moveRight;
-      this._input.jump = this._botInput.jump;
-      this._input.dash = this._botInput.dash;
-      this._input.attack = this._botInput.attack;
-      this._input.fastFall = this._botInput.fastFall;
+      this._input.moveLeft = Boolean(this._botInput.moveLeft);
+      this._input.moveRight = Boolean(this._botInput.moveRight);
+      this._input.jump = Boolean(this._botInput.jump);
+      this._input.dash = Boolean(this._botInput.dash);
+      this._input.punch = Boolean(this._botInput.punch || this._botInput.attack);
+      this._input.attack = this._input.punch;
+      this._input.block = Boolean(this._botInput.block);
+      this._input.fastFall = Boolean(this._botInput.fastFall);
     } else {
-      this._input.moveLeft = this._keysDown.has(this._keyMap.moveLeft) || this._touchInput.moveLeft;
-      this._input.moveRight = this._keysDown.has(this._keyMap.moveRight) || this._touchInput.moveRight;
-      this._input.jump = this._keysDown.has(this._keyMap.jump) || this._touchInput.jump;
-      this._input.dash = this._keysDown.has(this._keyMap.dash) || this._touchInput.dash;
-      this._input.attack = this._keysDown.has(this._keyMap.attack) || this._touchInput.attack;
-      this._input.fastFall = this._keysDown.has('KeyS') || this._keysDown.has('ArrowDown') || Boolean(this._touchInput.fastFall);
+      const isP1 = this._cfg.playerIndex === 0;
+      const mousePunch = isP1 && InputManager.getInstance().isMouseButtonDown(0);
+      const mouseBlock = isP1 && InputManager.getInstance().isMouseButtonDown(2);
+
+      this._input.moveLeft =
+        this._keysDown.has(this._keyMap.moveLeft) ||
+        (isP1 && (this._keysDown.has('KeyA') || this._keysDown.has('ArrowLeft'))) ||
+        this._touchInput.moveLeft;
+
+      this._input.moveRight =
+        this._keysDown.has(this._keyMap.moveRight) ||
+        (isP1 && (this._keysDown.has('KeyD') || this._keysDown.has('ArrowRight'))) ||
+        this._touchInput.moveRight;
+
+      this._input.jump =
+        this._keysDown.has(this._keyMap.jump) ||
+        (isP1 && (this._keysDown.has('Space') || this._keysDown.has('KeyW') || this._keysDown.has('ArrowUp'))) ||
+        this._touchInput.jump;
+
+      this._input.dash =
+        this._keysDown.has(this._keyMap.dash) ||
+        (isP1 && this._keysDown.has('ShiftLeft')) ||
+        this._touchInput.dash;
+
+      const punchKey = this._keyMap.punch ?? this._keyMap.attack;
+      this._input.punch =
+        this._keysDown.has(punchKey) ||
+        (isP1 && this._keysDown.has('KeyJ')) ||
+        mousePunch ||
+        this._touchInput.punch ||
+        Boolean(this._touchInput.attack);
+      this._input.attack = this._input.punch;
+
+      const blockKey = this._keyMap.block ?? 'KeyK';
+      this._input.block =
+        this._keysDown.has(blockKey) ||
+        (isP1 && this._keysDown.has('KeyK')) ||
+        mouseBlock ||
+        this._touchInput.block;
+
+      this._input.fastFall =
+        this._keysDown.has('KeyS') ||
+        this._keysDown.has('ArrowDown') ||
+        Boolean(this._touchInput.fastFall);
     }
 
-    // Freeze inputs during stun or match intro countdown or elimination
+    // Freeze inputs during stun or match countdown or elimination
     if (this._stunTimer > 0 || this._inputFrozen || this._isEliminated) {
       this._input.moveLeft = false;
       this._input.moveRight = false;
       this._input.jump = false;
       this._input.dash = false;
       this._input.attack = false;
+      this._input.punch = false;
+      this._input.block = false;
       this._input.fastFall = false;
     } else if (this._invertControlsTimer > 0) {
       this._invertControlsTimer = Math.max(0, this._invertControlsTimer - dt);
@@ -271,6 +349,15 @@ export class Puppet implements ITrackedEntity {
 
     if (this._stunTimer > 0) {
       this._stunTimer = Math.max(0, this._stunTimer - dt);
+    }
+    if (this._staggerTimer > 0) {
+      this._staggerTimer = Math.max(0, this._staggerTimer - dt);
+      this._input.punch = false;
+      this._input.block = false;
+      this._input.attack = false;
+    }
+    if (this._landingRecoveryTimer > 0) {
+      this._landingRecoveryTimer = Math.max(0, this._landingRecoveryTimer - dt);
     }
     if (this._tagGraceShieldTimer > 0) {
       this._tagGraceShieldTimer = Math.max(0, this._tagGraceShieldTimer - dt);
@@ -309,7 +396,6 @@ export class Puppet implements ITrackedEntity {
 
     // Low-gravity compensation
     if (this._lowGravityActive) {
-      // Offset downward gravity to 35% of normal
       const counterImpulse = (1 - this._lowGravityScale) * 22 * 1.2 * dt;
       this._bodies.torso.applyImpulse({ x: 0, y: -counterImpulse }, true);
     }
@@ -317,6 +403,8 @@ export class Puppet implements ITrackedEntity {
     // 3. Cooldowns & timers
     this._jumpCooldown = Math.max(0, this._jumpCooldown - dt);
     this._dashCooldown = Math.max(0, this._dashCooldown - dt);
+    this._punchCooldown = Math.max(0, this._punchCooldown - dt);
+
     if (this._backflipTimer > 0) {
       this._backflipTimer = Math.max(0, this._backflipTimer - dt);
     }
@@ -328,33 +416,124 @@ export class Puppet implements ITrackedEntity {
       }
     }
 
-    // 4. Ground detection
+    // 4. Ground detection & landing recovery trigger
     this._grounded = this._physWorld.isGrounded(this._bodies.torso, 0.85);
+    if (!this._grounded) {
+      this._wasAirborne = true;
+    } else if (this._wasAirborne) {
+      this._wasAirborne = false;
+      this._landingRecoveryTimer = FIGHTER_LANDING_RECOVERY_SEC;
+    }
 
     const torso = this._bodies.torso;
     const linvel = torso.linvel();
+    const profile = BODY_PROFILES[this._bodyProfile];
 
-    // 5. Locomotion logic
+    // 5. Block state check
+    this._isBlocking =
+      this._input.block &&
+      this._stunTimer <= 0 &&
+      this._staggerTimer <= 0 &&
+      this._punchState === 'idle';
+
+    // 6. Punch state machine
+    if (this._punchState === 'idle') {
+      if (
+        this._input.punch &&
+        this._punchCooldown <= 0 &&
+        !this._isBlocking &&
+        this._stunTimer <= 0 &&
+        this._staggerTimer <= 0
+      ) {
+        this._punchState = 'windup';
+        this._punchTimer = PUNCH_WINDUP_SEC;
+        this._punchCooldown = PUNCH_COOLDOWN_SEC;
+        this._state = 'punching';
+      }
+    } else if (this._punchState === 'windup') {
+      this._punchTimer -= dt;
+      this._state = 'punching';
+      if (this._punchTimer <= 0) {
+        this._punchState = 'active';
+        this._punchTimer = PUNCH_ACTIVE_SEC;
+        // Forward lunge impulse
+        const pDir = this._facingRight ? 1 : -1;
+        torso.applyImpulse({ x: pDir * 3.2, y: -0.8 }, true);
+        const armBody = this._facingRight ? this._bodies.upperArmR : this._bodies.upperArmL;
+        armBody.applyTorqueImpulse(pDir * 7.5, true);
+        const torsoPos = torso.translation();
+        this._particles.emitBurst(6, {
+          x: (torsoPos.x + pDir * 0.45) * PPM,
+          y: (torsoPos.y - 0.1) * PPM,
+          vx: pDir * 40,
+          vy: (Math.random() - 0.5) * 20,
+          life: 0.15,
+          size: 3.5,
+          color: this._cfg.colorPrimary,
+          alpha: 0.9,
+          kind: 'spark',
+          gravity: 0,
+        });
+      }
+    } else if (this._punchState === 'active') {
+      this._punchTimer -= dt;
+      this._state = 'punching';
+      if (this._punchTimer <= 0) {
+        this._punchState = 'recovery';
+        this._punchTimer = PUNCH_RECOVERY_SEC;
+      }
+    } else if (this._punchState === 'recovery') {
+      this._punchTimer -= dt;
+      if (this._punchTimer <= 0) {
+        this._punchState = 'idle';
+      }
+    }
+
+    // 7. Locomotion logic
+    const blockSpeedMult = this._isBlocking ? 0.38 : 1.0;
+    const landSpeedMult = this._landingRecoveryTimer > 0 ? 0.72 : 1.0;
+    const staggerSpeedMult = this._staggerTimer > 0 ? 0.45 : 1.0;
+
     if (this._input.moveLeft || this._input.moveRight) {
       this._facingRight = this._input.moveRight;
-      const targetSpeed = (this._facingRight ? 5.5 : -5.5) * this._speedMultiplier * this._slowdownMultiplier + this._conveyorVx;
+      const targetSpeed =
+        (this._facingRight ? FIGHTER_RUN_SPEED : -FIGHTER_RUN_SPEED) *
+        profile.speedMultiplier *
+        this._speedMultiplier *
+        this._slowdownMultiplier *
+        blockSpeedMult *
+        landSpeedMult *
+        staggerSpeedMult +
+        this._conveyorVx;
+
       const velDiff = targetSpeed - linvel.x;
-      torso.applyImpulse({ x: velDiff * 0.48, y: 0 }, true);
+      torso.applyImpulse({ x: velDiff * FIGHTER_ACCEL_IMPULSE_FACTOR * profile.massMultiplier, y: 0 }, true);
 
       if (this._grounded && !this._dashActive && this._backflipTimer <= 0) {
-        this._state = 'walking';
+        this._state = this._punchState !== 'idle' ? 'punching' : this._isBlocking ? 'blocking' : 'walking';
       }
     } else {
       if (this._grounded) {
-        // Friction / braking
         const brakingTarget = this._conveyorVx;
-        torso.applyImpulse({ x: (brakingTarget - linvel.x) * 0.28, y: 0 }, true);
+        torso.applyImpulse({ x: (brakingTarget - linvel.x) * 0.32, y: 0 }, true);
         if (!this._dashActive && this._backflipTimer <= 0) {
-          this._state = 'idle';
+          this._state =
+            this._punchState !== 'idle'
+              ? 'punching'
+              : this._isBlocking
+              ? 'blocking'
+              : this._staggerTimer > 0
+              ? 'staggered'
+              : 'idle';
         }
       } else {
         if (!this._dashActive && this._backflipTimer <= 0) {
-          this._state = linvel.y > 0.5 ? 'falling' : 'jumping';
+          this._state =
+            this._punchState !== 'idle'
+              ? 'punching'
+              : linvel.y > 0.5
+              ? 'falling'
+              : 'jumping';
         }
       }
     }
@@ -363,18 +542,17 @@ export class Puppet implements ITrackedEntity {
     this._conveyorVx = 0;
     this._slowdownMultiplier = 1.0;
 
-    // 5. Jump
-    if (this._input.jump && this._grounded && this._jumpCooldown <= 0) {
-      torso.applyImpulse({ x: 0, y: -11.5 }, true);
-      this._jumpCooldown = 0.28;
+    // 8. Jump
+    if (this._input.jump && this._grounded && this._jumpCooldown <= 0 && !this._isBlocking) {
+      torso.applyImpulse({ x: 0, y: FIGHTER_JUMP_IMPULSE * profile.massMultiplier }, true);
+      this._jumpCooldown = 0.22;
       this._state = 'jumping';
       this._emitJumpDust();
     } else if (!this._grounded && this._input.jump && linvel.y < 0) {
-      // Variable jump height: holding jump sustains upward lift
-      torso.applyImpulse({ x: 0, y: -5.0 * dt }, true);
+      torso.applyImpulse({ x: 0, y: FIGHTER_JUMP_SUSTAIN_IMPULSE * profile.massMultiplier * dt }, true);
     }
 
-    // 5b. Fast-fall (downward impulse while airborne)
+    // 8b. Fast-fall (downward impulse while airborne)
     if (!this._grounded && this._input.fastFall) {
       torso.applyImpulse({ x: 0, y: 16.0 * dt }, true);
       if (!this._dashActive && this._backflipTimer <= 0) {
@@ -382,7 +560,7 @@ export class Puppet implements ITrackedEntity {
       }
     }
 
-    // 6. Dash
+    // 9. Dash
     if (this._input.dash && this._dashCooldown <= 0 && !this._dashActive && this._stunTimer <= 0) {
       const dir = this._facingRight ? 1 : -1;
       torso.applyImpulse({ x: dir * 9.0, y: -2.0 }, true);
@@ -393,7 +571,7 @@ export class Puppet implements ITrackedEntity {
       this._emitDashTrail();
     }
 
-    // 7. Backflip check (air reverse or trigger)
+    // 10. Backflip check (air reverse or trigger)
     if (
       !this._grounded &&
       this._input.jump &&
@@ -403,10 +581,10 @@ export class Puppet implements ITrackedEntity {
       this.triggerBackflip();
     }
 
-    // 8. PD Upright Balance Torque
+    // 11. PD Upright Balance Torque
     this._applyUprightTorque(dt, linvel.x);
 
-    // 9. Procedural walk cycle forces
+    // 12. Procedural walk cycle forces
     if (this._grounded && this._state === 'walking') {
       this._applyWalkCycle(dt, linvel.x);
     }
@@ -447,8 +625,9 @@ export class Puppet implements ITrackedEntity {
 
     // PD Controller formula: Torque = Kp * error - Kd * angularVelocity
     const error = targetAngle - curAngle;
-    const kp = 650;
-    const kd = 60;
+    const isStaggered = this._staggerTimer > 0;
+    const kp = isStaggered ? 180 : 650;
+    const kd = isStaggered ? 25 : 60;
     const torque = kp * error - kd * curAngVel;
 
     torso.applyTorqueImpulse(torque * dt * dt, true);
@@ -605,6 +784,9 @@ export class Puppet implements ITrackedEntity {
       this._bombTimer,
       this._isIt,
       this._stunTimer > 0,
+      this.isPunching(),
+      this.isBlocking(),
+      this.isStaggered(),
     );
   }
 
@@ -703,7 +885,125 @@ export class Puppet implements ITrackedEntity {
     this._activePowerUp = null;
     this._phaseShieldActive = false;
     this._speedMultiplier = 1.0;
+    this._damage = 0;
+    this._staggerTimer = 0;
+    this._landingRecoveryTimer = 0;
+    this._punchState = 'idle';
+    this._punchTimer = 0;
+    this._punchCooldown = 0;
+    this._isBlocking = false;
     this.resetLocomotion();
+  }
+
+  // ── Style Overhaul: Combat, Damage & Ragdoll Methods ───────────────────────
+  public getDamage(): number {
+    return this._damage;
+  }
+
+  public addDamage(amount: number): void {
+    this._damage = Math.min(100, Math.max(0, this._damage + amount));
+  }
+
+  public resetDamage(): void {
+    this._damage = 0;
+  }
+
+  public isPunching(): boolean {
+    return this._punchState !== 'idle';
+  }
+
+  public isPunchActive(): boolean {
+    return this._punchState === 'active';
+  }
+
+  public isBlocking(): boolean {
+    return this._isBlocking;
+  }
+
+  public isStaggered(): boolean {
+    return this._staggerTimer > 0;
+  }
+
+  public getBodyProfile(): BodyProfile {
+    return this._bodyProfile;
+  }
+
+  public setBodyProfile(p: BodyProfile): void {
+    this._bodyProfile = p;
+  }
+
+  public takePunchHit(
+    attackerPos: Vec2,
+    baseDamage = PUNCH_BASE_DAMAGE,
+    baseKnockback = PUNCH_BASE_KNOCKBACK,
+    punchPowerMult = 1.0,
+  ): { blocked: boolean; damage: number } {
+    const profile = BODY_PROFILES[this._bodyProfile];
+    const torsoPos = this._bodies.torso.translation();
+    const hitFromLeft = attackerPos.x < torsoPos.x;
+    const hitDir = hitFromLeft ? 1 : -1;
+
+    if (this._isBlocking) {
+      // Blocking mitigates damage and knockback, prevents stun
+      const actualDamage = baseDamage * (1 - BLOCK_DAMAGE_DAMPING) * punchPowerMult;
+      this._damage = Math.min(100, this._damage + actualDamage);
+      const knockback = baseKnockback * (1 - BLOCK_KNOCKBACK_DAMPING) * profile.knockbackReceivedMultiplier;
+      this._bodies.torso.applyImpulse({ x: hitDir * knockback, y: -knockback * 0.2 }, true);
+
+      // Block sparks
+      this._particles.emitBurst(10, {
+        x: (torsoPos.x - hitDir * 0.2) * PPM,
+        y: torsoPos.y * PPM,
+        vx: -hitDir * 30,
+        vy: (Math.random() - 0.5) * 30,
+        life: 0.2,
+        size: 4,
+        color: 0x00ffff,
+        alpha: 1.0,
+        kind: 'spark',
+        gravity: 20,
+      });
+
+      return { blocked: true, damage: actualDamage };
+    }
+
+    // Unblocked solid hit: scales knockback with damage meter
+    const actualDamage = baseDamage * punchPowerMult;
+    this._damage = Math.min(100, this._damage + actualDamage);
+    const damageScale = 1.0 + this._damage / DAMAGE_KNOCKBACK_SCALE_DIVISOR;
+    const knockback = baseKnockback * damageScale * profile.knockbackReceivedMultiplier * punchPowerMult;
+    const vertPop = PUNCH_VERTICAL_POP * (0.8 + (this._damage / 100) * 0.6);
+
+    // Apply linear impulse and angular torque for ragdoll stumble
+    this._bodies.torso.applyImpulse({ x: hitDir * knockback, y: vertPop }, true);
+    this._bodies.torso.applyTorqueImpulse(hitDir * PUNCH_RAGDOLL_TORQUE, true);
+
+    // Set hit stun and comical floppy stagger
+    this._stunTimer = PUNCH_HIT_STUN_SEC;
+    this._staggerTimer = RAGDOLL_STAGGER_RECOVERY_SEC;
+    this._state = 'staggered';
+
+    // Flail limbs
+    this._bodies.upperArmL.applyTorqueImpulse((Math.random() - 0.5) * 8.0, true);
+    this._bodies.upperArmR.applyTorqueImpulse((Math.random() - 0.5) * 8.0, true);
+    this._bodies.head.applyTorqueImpulse(hitDir * 4.0, true);
+
+    // Flash skin and emit impact sparks
+    this._skin.triggerTagFlash();
+    this._particles.emitBurst(18, {
+      x: torsoPos.x * PPM,
+      y: torsoPos.y * PPM,
+      vx: hitDir * 50 + (Math.random() - 0.5) * 40,
+      vy: -40 + (Math.random() - 0.5) * 40,
+      life: 0.35,
+      size: 5,
+      color: 0xff3300,
+      alpha: 1.0,
+      kind: 'spark',
+      gravity: 50,
+    });
+
+    return { blocked: false, damage: actualDamage };
   }
 
   // ── Environmental & Power-Up methods ───────────────────────────────────────
